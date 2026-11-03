@@ -1,4 +1,4 @@
-# QuNet: Spec
+# Project Q: Spec
 
 Full background: `docs/research.md` (team guide), `docs/study_guide.html` (explainer). This file is the build contract; if they disagree, this wins.
 
@@ -23,7 +23,7 @@ Hardware engineers who know Verilog but not quantum.
 3. `qubo.py`: x_i ∈ {0,1} per node. Cut terms: 2-gate net `xi+xj-2xixj`; 3-gate net `xi+xj+xk-xixj-xjxk-xixk`; 4–8 gate nets approximated by pairs weighted 1/(n-1). Balance penalty `λ(Σ wᵢxᵢ − W/2)²`.
 4. `solvers.py`: brute force (≤24 nodes), random balanced, simulated annealing, Kernighan–Lin (networkx), KaHyPar (fallback: KL if install fails), QAOA (p=1, then p=2) on Aer, COBYLA for γ/β, Sampler for final shots.
 5. `scorecard.py`: one JSON record per run (design, solver, k, cut, best_known_cut, gap_percent, balance_ratio, qubits, shots, runtime_s). Always recompute the **true** cut classically.
-6. `cli.py`: `qunet partition design.v --solver qaoa`.
+6. `cli.py`: `project-q partition design.v --solver qaoa`.
 
 ## Stack
 Python 3.11/3.12, qiskit, qiskit-aer, qiskit-ibm-runtime, qiskit-addon-opt-mapper (new; if it breaks, build the Hamiltonian by hand from the QUBO), networkx, numpy, scipy, matplotlib, kahypar (optional), Yosys (system install). Pin versions in `requirements.txt` once working.
@@ -53,7 +53,7 @@ c17 (6 NAND gates, expected best balanced cut = 2), then ISCAS-85 c432, c880; a 
 
 ## Repo layout
 ```
-qunet/  parse_yosys.py coarsen.py qubo.py solvers.py scorecard.py cli.py
+project_q/  parse_yosys.py coarsen.py qubo.py solvers.py scorecard.py cli.py
 benchmarks/  c17.v c432.v c880.v ...
 notebooks/demo.ipynb
 tests/

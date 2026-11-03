@@ -6,7 +6,7 @@ Nov 2, 2026 · @Dev
 
 We are building a tool that takes a chip design written in Verilog, splits it across two chips with as few connecting wires as possible, and uses IBM's quantum algorithm QAOA (in Qiskit) to search for that split. It then compares the quantum answer honestly against the best classical tools.
 
-**Working name:** QuNet (check that the name is free before using it).
+**Working name:** Project Q (check that the name is free before using it).
 
 **Who it's for:** hardware engineers who can write Verilog but know nothing about quantum computing.
 
@@ -35,7 +35,7 @@ We are building a tool that takes a chip design written in Verilog, splits it ac
 **Pitch line:** *"Write Verilog, get a quantum-ready optimization problem and an honest scorecard. Hardware engineers can now ask quantum questions without a physicist."*
 
 
-![QuNet pipeline · 8 steps, 1 on quantum](media/image1.png)
+![Project Q pipeline · 8 steps, 1 on quantum](media/image1.png)
 
 Read it as a snake: top row left to right, then bottom row right to left. Only the QAOA step is quantum; routing reuses the same solver.
 
@@ -615,13 +615,13 @@ If a gate is missed, everyone goes back to fixing that stage. Routing is dropped
 ### Repo layout
 
 ```text
-qunet/
+project_q/
   parse_yosys.py # JSON -> hypergraph
   coarsen.py # merge + FM refine
   qubo.py # partition + routing formulas
   solvers.py # brute, random, SA, KaHyPar, QAOA
   scorecard.py # JSON results
-  cli.py # qunet partition design.v
+  cli.py # project-q partition design.v
   benchmarks/ # c17.v, c432.v, c880.v ...
   notebooks/demo.ipynb
   `requirements.txt`
@@ -629,7 +629,7 @@ qunet/
 
 ### Deliverables checklist
 
-- [ ] `qunet partition design.v --solver qaoa` works in one command
+- [ ] `project-q partition design.v --solver qaoa` works in one command
 
 - [ ] Results table: all solvers × c17, c432, c880
 

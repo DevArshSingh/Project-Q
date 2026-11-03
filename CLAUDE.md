@@ -1,4 +1,4 @@
-# Project-Q (QuNet)
+# Project Q
 
 Hackathon project (IBM Qiskit Fall Fest 2026). Read `SPEC.md` first, then follow `BUILD_PLAN.md` phase by phase (it is the step-by-step instruction file), then `docs/research.md` for background.
 
@@ -17,4 +17,4 @@ Hackathon project (IBM Qiskit Fall Fest 2026). Read `SPEC.md` first, then follow
 ## Commands
 - Setup: `uv venv --python 3.12 && source .venv/bin/activate && uv pip install -r requirements.txt`
 - Tests: `pytest -q`
-- CLI: `python -m qunet.cli partition benchmarks/c17.v --solver qaoa`
+- CLI: `python -m project_q.cli partition benchmarks/c17.v --solver qaoa`

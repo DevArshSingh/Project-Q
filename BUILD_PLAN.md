@@ -1,6 +1,6 @@
 # BUILD_PLAN.md: instructions for Claude Code
 
-You are building QuNet. Follow these phases IN ORDER. `SPEC.md` defines what; this file defines how and in what order. `docs/research.md` is background only (ignore its learning sections unless you need a formula).
+You are building Project Q. Follow these phases IN ORDER. `SPEC.md` defines what; this file defines how and in what order. `docs/research.md` is background only (ignore its learning sections unless you need a formula).
 
 ## Working rules (apply to every phase)
 1. Start each phase by stating the plan in a few lines, then implement.
@@ -17,17 +17,17 @@ You are building QuNet. Follow these phases IN ORDER. `SPEC.md` defines what; th
 ## Phase 0: Environment
 - Create `.venv`, `requirements.txt` (qiskit, qiskit-aer, qiskit-ibm-runtime, qiskit-addon-opt-mapper, networkx, numpy, scipy, matplotlib, pytest; `kahypar` optional).
 - Check `yosys -V`. If missing, tell the user how to install it and stop.
-- Add `pyproject.toml` or `setup.py` so `python -m qunet.cli` works.
+- Add `pyproject.toml` or `setup.py` so `python -m project_q.cli` works.
 - **Done when:** imports succeed, `pytest` runs (even with zero tests).
 
-## Phase 1: Yosys → hypergraph (`qunet/parse_yosys.py`)
+## Phase 1: Yosys → hypergraph (`project_q/parse_yosys.py`)
 - Function `run_yosys(verilog_path) -> dict`: run `yosys -p "read_verilog X; synth -flatten -top <top>; abc -g NAND; write_json out.json"`, return parsed JSON. Auto-detect top module.
 - Function `load_hypergraph(json) -> Hypergraph` (small dataclass: `nodes` = cell names, `nets` = list of sets of nodes, optional node weights default 1).
 - Ignore port-only nets (nets touching < 2 cells). Drop nets with more than a configurable size (default 50: clock/reset). Ignore unknown JSON fields.
 - Helper `true_cut(hypergraph, assignment) -> int`: number of nets whose cells are in different groups. Pure Python, independent of QUBO code.
 - **Done when:** c17 gives 6 nodes and the 4 internal nets from `docs/research.md` section 3 (N10, N11, N16, N19); `true_cut` of A={g10,g16,g22}, B={g11,g19,g23} is 2.
 
-## Phase 2: QUBO + brute force (`qunet/qubo.py`, `solvers.py`) → GATE 1
+## Phase 2: QUBO + brute force (`project_q/qubo.py`, `solvers.py`) → GATE 1
 - `build_partition_qubo(hg, lam) -> QUBO` (store as dict `{(i,j): coeff}` + constant). Terms per SPEC (exact for 2 and 3-cell nets, pair approximation 1/(n-1) for 4–8, drop larger). Balance term `lam * (sum(w_i x_i) - W/2)^2`, expanded into linear/quadratic terms.
 - `qubo_energy(qubo, bits)` evaluator.
 - `brute_force(hg, qubo)`: enumerate all 2^n assignments (n ≤ 24); return best balanced assignment by true cut, plus the lowest-QUBO-energy assignment.
@@ -43,10 +43,10 @@ You are building QuNet. Follow these phases IN ORDER. `SPEC.md` defines what; th
 
 ## Phase 4: Scorecard + CLI (`scorecard.py`, `cli.py`)
 - `ScoreRecord` dataclass matching the SPEC JSON (design, solver, k, cut, best_known_cut, gap_percent, balance_ratio, qubits, shots, runtime_s, plus `backend`, `lambda`, `p`, `seed`). Save one JSON per run to `results/`.
-- CLI: `python -m qunet.cli partition <file.v> --solver {brute,random,sa,kl,kahypar,qaoa} --lam 1.0 --p 1 --shots 4000 --seed 0` and `... benchmark <file.v>` which runs all solvers and prints a comparison table.
+- CLI: `python -m project_q.cli partition <file.v> --solver {brute,random,sa,kl,kahypar,qaoa} --lam 1.0 --p 1 --shots 4000 --seed 0` and `... benchmark <file.v>` which runs all solvers and prints a comparison table.
 - **Done when:** `benchmark benchmarks/c17.v` prints a table of all solvers and writes JSON.
 
-## Phase 5: Coarsening + FM refinement (`qunet/coarsen.py`) → GATE 2 (part 2)
+## Phase 5: Coarsening + FM refinement (`project_q/coarsen.py`) → GATE 2 (part 2)
 - Coarsen: heavy-edge matching (merge pairs of nodes sharing the most nets) repeatedly until ≤ target (default 20) supernodes. Supernodes carry weights; QUBO balance uses weights.
 - Uncoarsen: project assignment back level by level; at each level run Fiduccia–Mattheyses single-node moves (respect a balance tolerance) using `true_cut`.
 - Pipeline solver `multilevel(hg, coarse_solver)` where `coarse_solver` ∈ {qaoa, sa, random, brute}.
@@ -81,7 +81,7 @@ Budget: ~10 minutes of QPU time TOTAL, so do exactly one small job after everyth
 - **Done when:** a fresh clone can follow the README and reproduce the c17 run.
 
 ## Final checklist
-- [ ] `qunet partition design.v --solver qaoa` works
+- [ ] `project-q partition design.v --solver qaoa` works
 - [ ] Results table (all solvers × c17, c432, c880)
 - [ ] Ablation chart, λ sweep plot, partition picture
 - [ ] One hardware run reported honestly
