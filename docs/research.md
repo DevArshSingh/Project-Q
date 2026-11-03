@@ -130,25 +130,27 @@ These two goals fight each other. Putting everything on one chip gives a cut of 
 
 ### Worked example: c17
 
-We ignore the 5 input pins and just look at the 4 internal nets:
+A net matters if it touches at least 2 gates. That gives the 4 internal nets plus input pin N3, which feeds both G10 and G11: if those two gates end up on different chips, N3 has to be wired to both, so it counts as a cut net too. The other inputs (N1, N2, N6, N7) and the outputs (N22, N23) each touch only one gate, so they can never be cut and we drop them.
 
 | Net | Gates it touches |
 |-----|------------------|
+| N3  | G10, G11 (input pin) |
 | N10 | G10, G22         |
 | N11 | G11, G16, G19    |
 | N16 | G16, G22, G23    |
 | N19 | G19, G23         |
 
-Try the split **A = {G10, G16, G22}** and **B = {G11, G19, G23}**:
+Try the split **A = {G10, G11, G22}** and **B = {G16, G19, G23}**:
 
 | Net | Crosses? | Why                        |
 |-----|----------|----------------------------|
+| N3  | No       | G10 and G11 both in A      |
 | N10 | No       | G10 and G22 both in A      |
-| N11 | **Yes**  | G16 in A, G11 and G19 in B |
-| N16 | **Yes**  | G16, G22 in A, G23 in B    |
+| N11 | **Yes**  | G11 in A, G16 and G19 in B |
+| N16 | **Yes**  | G22 in A, G16 and G23 in B |
 | N19 | No       | G19 and G23 both in B      |
 
-Cut = 2. **Team exercise:** try other 3/3 splits on paper. You'll find 2 is the best possible for c17. Getting a cut of 1 always forces a lopsided split.
+Cut = 2, and this is the only 3/3 split (with its mirror image, A and B swapped) that gets 2. A near miss: A = {G10, G16, G22}, B = {G11, G19, G23} cuts N3, N11 and N16, so cut = 3. **Team exercise:** try other 3/3 splits on paper and check that none beats 2. Lopsided splits don't help either: no 2/4 split cuts fewer than 2 nets.
 
 ### Why it's hard
 
@@ -331,7 +333,7 @@ $$
 ### The full c17 formula
 
 $$
-E = (x_{10} + x_{22} - 2x_{10}x_{22}) + (x_{11} + x_{16} + x_{19} - x_{11}x_{16} - x_{16}x_{19} - x_{11}x_{19}) + (x_{16} + x_{22} + x_{23} - x_{16}x_{22} - x_{22}x_{23} - x_{16}x_{23}) + (x_{19} + x_{23} - 2x_{19}x_{23}) + \lambda (x_{10} + x_{11} + x_{16} + x_{19} + x_{22} + x_{23} - 3)^2
+E = (x_{10} + x_{11} - 2x_{10}x_{11}) + (x_{10} + x_{22} - 2x_{10}x_{22}) + (x_{11} + x_{16} + x_{19} - x_{11}x_{16} - x_{16}x_{19} - x_{11}x_{19}) + (x_{16} + x_{22} + x_{23} - x_{16}x_{22} - x_{22}x_{23} - x_{16}x_{23}) + (x_{19} + x_{23} - 2x_{19}x_{23}) + \lambda (x_{10} + x_{11} + x_{16} + x_{19} + x_{22} + x_{23} - 3)^2
 $$
 
 A formula like this, with 0/1 variables, at most two variables multiplied together, and rules folded in as penalties, is a **QUBO** (Quadratic Unconstrained Binary Optimization).

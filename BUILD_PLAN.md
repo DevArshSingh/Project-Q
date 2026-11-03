@@ -25,7 +25,7 @@ You are building Project Q. Follow these phases IN ORDER. `SPEC.md` defines what
 - Function `load_hypergraph(json) -> Hypergraph` (small dataclass: `nodes` = cell names, `nets` = list of sets of nodes, optional node weights default 1).
 - Ignore port-only nets (nets touching < 2 cells). Drop nets with more than a configurable size (default 50: clock/reset). Ignore unknown JSON fields.
 - Helper `true_cut(hypergraph, assignment) -> int`: number of nets whose cells are in different groups. Pure Python, independent of QUBO code.
-- **Done when:** c17 gives 6 nodes and the 4 internal nets from `docs/research.md` section 3 (N10, N11, N16, N19); `true_cut` of A={g10,g16,g22}, B={g11,g19,g23} is 2.
+- **Done when:** c17 gives 6 nodes and 5 nets: the 4 internal nets N10, N11, N16, N19 plus input net N3 (`docs/research.md` section 3). ABC renames everything, so the test checks the structure: the hypergraph is isomorphic to the research.md one. `true_cut` of A={g10,g11,g22}, B={g16,g19,g23} is 2, and of A={g10,g16,g22}, B={g11,g19,g23} is 3.
 
 ## Phase 2: QUBO + brute force (`project_q/qubo.py`, `solvers.py`) → GATE 1
 - `build_partition_qubo(hg, lam=2.0) -> QUBO` (store as dict `{(i,j): coeff}` + constant). Terms per SPEC (exact for 2 and 3-cell nets, pair approximation 1/(n-1) for 4–8, drop larger). Balance term `lam * (sum(w_i x_i) - W/2)^2`, expanded into linear/quadratic terms.
@@ -34,7 +34,7 @@ You are building Project Q. Follow these phases IN ORDER. `SPEC.md` defines what
 - `brute_force(hg, qubo)`: enumerate all 2^n assignments, vectorized with numpy (build the bit matrix for a chunk of assignments, compute energies and true cuts as array ops). Default `max_n=20`; raise `ValueError` above that unless `allow_large=True` (hard cap 24). Return best balanced assignment by true cut, plus the lowest-QUBO-energy assignment. Test: vectorized results equal a plain-Python loop on c17.
 - Also implement `random_balanced`, `simulated_annealing` (on the QUBO), `kernighan_lin` (networkx on a clique-expanded graph, then evaluate with `true_cut`).
 - Tests: for every one of the 64 c17 assignments, QUBO energy minus balance term equals `true_cut` for exact nets (this is the formula check); the minimum-energy assignment is balanced with true cut 2.
-- **GATE 1 done when:** hypergraph, QUBO energy and brute force all agree on c17 (cut 2, balanced 3/3), and at λ=2.0 the energy gap ΔE = min{E(x) : x not optimal} − E* is asserted strictly > 0 (expected 1.0). Also print ΔE at λ=1.0 (expected 0) to show why the default is 2.0. Print a table of all 20 balanced splits with cut. Report in the summary.
+- **GATE 1 done when:** hypergraph, QUBO energy and brute force all agree on c17 (cut 2, balanced 3/3), and at λ=2.0 the energy gap ΔE = min{E(x) : x not optimal} − E* is asserted strictly > 0 (expected 1.0). Also print the margin of the best unbalanced state at λ=1.0 and λ=2.0 (expected 1 and 2) to show why the default is 2.0. Print a table of all 20 balanced splits with cut. Report in the summary.
 
 ## Phase 3: QUBO → Hamiltonian → QAOA on Aer (`solvers.py`) → GATE 2 (part 1)
 - Convert QUBO to Ising (x = (1−z)/2) → `SparsePauliOp` (via opt-mapper or by hand). Unit test: Hamiltonian expectation for each basis state equals `qubo_energy` (up to the constant offset).

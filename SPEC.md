@@ -18,9 +18,9 @@ Hardware engineers who know Verilog but not quantum.
 **Out of scope:** full Steiner tree packing, k>2, multi-layer routing.
 
 ## Pipeline
-1. `parse_yosys.py`: run Yosys (`synth -flatten; abc -g NAND; write_json`), read JSON → hypergraph (cells = nodes, nets = hyperedges). Ignore unknown JSON fields. Drop huge nets (clock/reset).
+1. `parse_yosys.py`: run Yosys (`synth -flatten; abc -g NAND; write_json`), read JSON → hypergraph (cells = nodes, nets = hyperedges). A net is any wire bit touching ≥ 2 cells, **including nets driven by primary inputs** (c17's N3 feeds g10 and g11, so c17 has 5 nets). Nets touching 1 cell are dropped. Ignore unknown JSON fields. Drop huge nets (clock/reset). ABC re-synthesis loses the original cell/wire names, so nodes are labelled by the net they drive.
 2. `coarsen.py`: merge strongly connected nodes into weighted supernodes until ≤ ~20 remain; uncoarsen with FM refinement.
-3. `qubo.py`: x_i ∈ {0,1} per node. Cut terms: 2-gate net `xi+xj-2xixj`; 3-gate net `xi+xj+xk-xixj-xjxk-xixk`; 4–8 gate nets approximated by pairs weighted 1/(n-1). Balance penalty `λ(Σ wᵢxᵢ − W/2)²`. Default λ = 2.0: on c17, λ = 1 lets an unbalanced 2/4 split with cut 1 tie the optimum (energy gap 0), while λ = 2 gives a gap of 1.
+3. `qubo.py`: x_i ∈ {0,1} per node. Cut terms: 2-gate net `xi+xj-2xixj`; 3-gate net `xi+xj+xk-xixj-xjxk-xixk`; 4–8 gate nets approximated by pairs weighted 1/(n-1). Balance penalty `λ(Σ wᵢxᵢ − W/2)²`. Default λ = 2.0: on c17 the gap to the next state is 1 for any λ ≥ 1 (the next state is a balanced cut-3 split), but λ = 2 keeps every unbalanced state at least 2 above the optimum (λ = 1 gives only 1), which leaves QAOA a margin against lopsided answers.
 4. `solvers.py`: brute force (vectorized numpy enumeration in chunks; routine cap n ≤ 20 via default `max_n=20`, up to 24 only with explicit `allow_large=True`, never above 24), random balanced, simulated annealing, Kernighan–Lin (networkx), KaHyPar (fallback: KL if install fails), QAOA (p=1, then p=2) on Aer, COBYLA for γ/β, Sampler for final shots.
 5. `scorecard.py`: one JSON record per run (design, solver, k, cut, best_known_cut, gap_percent, balance_ratio, qubits, shots, runtime_s). Always recompute the **true** cut classically.
 6. `cli.py`: `project-q partition design.v --solver qaoa`.
@@ -35,7 +35,7 @@ Hardware engineers who know Verilog but not quantum.
 Python 3.12 (uv venv), qiskit, qiskit-aer, qiskit-ibm-runtime, qiskit-addon-opt-mapper (new; if it breaks, build the Hamiltonian by hand from the QUBO), networkx, numpy, scipy, matplotlib, kahypar (optional), Yosys (system install). Pin versions in `requirements.txt` once working.
 
 ## Benchmarks
-c17 (6 NAND gates, expected best balanced cut = 2), then ISCAS-85 c432, c880; a few small EPFL circuits.
+c17 (6 NAND gates, 5 nets, expected best balanced cut = 2, unique optimum {g10,g11,g22} | {g16,g19,g23}), then ISCAS-85 c432, c880; a few small EPFL circuits.
 
 ## Gates (stop and fix before moving on)
 - **Gate 1:** Yosys→hypergraph→QUBO energy agrees with brute force on c17. With λ = 2.0, every minimum-energy assignment is balanced with true cut 2, and the **energy gap** ΔE = min{E(x) : x not optimal} − E* is **strictly > 0** (asserted in a test; expected 1.0).
