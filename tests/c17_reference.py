@@ -5,6 +5,8 @@ from pathlib import Path
 from project_q.parse_yosys import Hypergraph
 
 C17_V = Path(__file__).resolve().parents[1] / "benchmarks" / "c17.v"
+# Committed Yosys output for c17 (scripts/export_netlists.py), loadable without Yosys.
+C17_JSON = Path(__file__).resolve().parents[1] / "benchmarks" / "netlists" / "c17.json"
 
 # 4 internal nets plus input pin N3, which feeds two gates and so is a real (cuttable) net.
 EXPECTED_NODES = ["g10", "g11", "g16", "g19", "g22", "g23"]

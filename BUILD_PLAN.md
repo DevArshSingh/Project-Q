@@ -1,27 +1,57 @@
 # BUILD_PLAN.md: instructions for Claude Code
 
-You are building Project Q. Follow these phases IN ORDER. `SPEC.md` defines what; this file defines how and in what order. `docs/research.md` is background only (ignore its learning sections unless you need a formula).
+You are building Project Q for the IBM Qiskit Fall Fest 2026 (UW Quantum Club). Follow these phases IN ORDER. `SPEC.md` defines what; this file defines how and in what order. `docs/research.md` is background only (ignore its learning sections unless you need a formula).
+
+## Hackathon requirements this plan must satisfy
+- Prompt: a Qiskit tool/abstraction bridging a non-quantum problem (chip design) to a quantum algorithm (QAOA).
+- **Required submission: a project notebook (`notebooks/project_q.ipynb`) and presentation slides.** Optional: GitHub link, documentation, poster.
+- Judging: (1) technical soundness, (2) creative thinking, (3) clear explanation: the team must explain and defend every choice and answer questions ("AI is allowed, understanding is required"), (4) team contribution.
+- Timeline (Eastern): submission opens **Nov 5**; final judging **Fri Nov 6, 6:30 PM**. Plan to be submittable by the end of Nov 5.
 
 ## Working rules (apply to every phase)
 1. Start each phase by stating the plan in a few lines, then implement.
 2. Write tests first or alongside. Run `pytest -q`. A phase is done only when its **Done when** checks pass.
-3. After a phase: show a short summary + the test output, `git add -A && git commit` on `main` (one commit per phase; no branches for now), then STOP and wait for the user to say "next".
-4. If a **Gate** fails, fix it before anything else. Do not skip ahead.
-5. Keep code simple and commented (the team is new to quantum + EDA). Add a short "why" comment on every non-obvious formula.
-6. Do not invent library APIs. Check the installed version (`pip show qiskit qiskit-aer qiskit-addon-opt-mapper qiskit-ibm-runtime`) and read its docstrings/docs before using it. If `qiskit-addon-opt-mapper` misbehaves, build the Ising Hamiltonian (SparsePauliOp) by hand from the QUBO.
-7. Never claim quantum advantage. Report results as they are, including when classical wins.
-8. Max 24 qubits on Aer.
+3. **Understanding checkpoint (required at the end of every phase):**
+   - Explain what was built in plain words (max 8 lines, no jargon without a definition).
+   - Append 2 likely judge questions with correct short answers to `docs/QA_PREP.md`.
+   - Add or update the matching section in the notebook (see Notebook rule).
+4. Then `git add -A && git commit` (one commit per phase, message names the phase), show a short summary + the test output, and STOP until the user says "next".
+5. If a **Gate** fails, fix it before anything else. Do not skip ahead.
+6. Keep code simple and commented (the team is new to quantum + EDA). Add a short "why" comment on every non-obvious formula.
+7. Do not invent library APIs. Check the installed version (`pip show qiskit qiskit-aer qiskit-addon-opt-mapper qiskit-ibm-runtime`) and read its docstrings/docs before using it. If `qiskit-addon-opt-mapper` misbehaves, build the Ising Hamiltonian (SparsePauliOp) by hand from the QUBO.
+8. Never claim quantum advantage. Report results as they are, including when classical wins.
+9. Max 24 qubits on Aer.
+10. **Notebook rule:** `notebooks/project_q.ipynb` is the main deliverable. It imports from `project_q/`, runs top to bottom in a fresh environment, has a short markdown explanation before every code cell, and must NOT require Yosys (it loads committed netlists from `benchmarks/netlists/`; the Yosys step is optional and guarded by `shutil.which("yosys")`).
+11. **Team rule:** one branch per teammate, commits under their own name. Each phase has an Owner in the table below. Claude Code assists; the owner must be able to explain the code. (Phases 0–2 were built on `main` before this rule; branches start with Phase 3.)
+
+## Schedule (adjust if the user says otherwise)
+| When | Target |
+|---|---|
+| Nov 3 (today) | Phases 0 to 3 |
+| Nov 4 | Phases 4, 5, and the hardware run (Phase 8), early, so queue delays don't hurt |
+| Nov 5 | Phase 6 (benchmarks), Phase 9 (notebook + README), slides; **submit** notebook + slides when portal opens |
+| Nov 6 | Rehearse twice, fix only bugs, final push before 6:30 PM |
+Cut order if behind: routing (Phase 7, never start), c880, p=2, extra λ values, poster.
+
+## Owners (fill in with teammates' names)
+| Phase | Owner |
+|---|---|
+| 1 Parser, 5 Coarsening | _(hardware lead)_ |
+| 2 QUBO, 6 Benchmarks | _(formulation lead)_ |
+| 3 QAOA, 8 Hardware | _(quantum lead)_ |
+| 4 CLI, 9 Notebook + README, slides | _(demo lead)_ |
 
 ---
 
 ## Phase 0: Environment
-- Create `.venv`, `requirements.txt` (qiskit, qiskit-aer, qiskit-ibm-runtime, qiskit-addon-opt-mapper, networkx, numpy, scipy, matplotlib, pytest; `kahypar` optional).
-- Check `yosys -V`. If missing, tell the user how to install it and stop.
-- Add `pyproject.toml` or `setup.py` so `python -m project_q.cli` works.
+- Create `.venv`, `requirements.txt` (qiskit, qiskit-aer, qiskit-ibm-runtime, qiskit-addon-opt-mapper, networkx, numpy, scipy, matplotlib, pytest, jupyter, nbformat; `kahypar` optional).
+- Check `yosys -V`. If missing, tell the user how to install it (on Windows use WSL) and stop.
+- Add `pyproject.toml` so `python -m project_q.cli` works.
 - **Done when:** imports succeed, `pytest` runs (even with zero tests).
 
 ## Phase 1: Yosys → hypergraph (`project_q/parse_yosys.py`)
 - Function `run_yosys(verilog_path) -> dict`: run `yosys -p "read_verilog X; synth -flatten -top <top>; abc -g NAND; write_json out.json"`, return parsed JSON. Auto-detect top module.
+- **Save the generated JSON for each benchmark to `benchmarks/netlists/<name>.json` and commit it** so the notebook works without Yosys.
 - Function `load_hypergraph(json) -> Hypergraph` (small dataclass: `nodes` = cell names, `nets` = list of sets of nodes, optional node weights default 1).
 - Ignore port-only nets (nets touching < 2 cells). Drop nets with more than a configurable size (default 50: clock/reset). Ignore unknown JSON fields.
 - Helper `true_cut(hypergraph, assignment) -> int`: number of nets whose cells are in different groups. Pure Python, independent of QUBO code.

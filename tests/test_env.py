@@ -26,6 +26,13 @@ def test_core_imports():
     assert project_q.__version__
 
 
+def test_notebook_tooling_imports():
+    # The required deliverable is a notebook; the notebook test executes it with nbconvert.
+    import ipykernel  # noqa: F401
+    import nbconvert  # noqa: F401
+    import nbformat  # noqa: F401
+
+
 def test_opt_mapper_import():
     # Optional by design: if the add-on breaks, we build the Hamiltonian by hand (SPEC.md).
     pytest.importorskip("qiskit_addon_opt_mapper")

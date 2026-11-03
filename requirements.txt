@@ -9,6 +9,12 @@ numpy
 scipy
 matplotlib
 pytest
+# Notebook deliverable (notebooks/project_q.ipynb): authoring, executing, and
+# the nbconvert-based test that runs it top to bottom.
+jupyter
+nbformat
+nbconvert
+ipykernel
 
 # Optional: KaHyPar baseline. If it fails to install, the KL baseline is used instead (see SPEC.md).
 # kahypar

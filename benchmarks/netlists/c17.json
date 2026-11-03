@@ -1,0 +1,373 @@
+{
+ "creator": "Yosys 0.52 (git sha1 fee39a3284c90249e1d9684cf6944ffbbcbb8f90)",
+ "modules": {
+  "c17": {
+   "attributes": {
+    "src": "c17.v:1.1-9.10",
+    "top": "00000000000000000000000000000001"
+   },
+   "cells": {
+    "$abc$109$auto$blifparse.cc:396:parse_blif$110": {
+     "attributes": {},
+     "connections": {
+      "A": [
+       5
+      ],
+      "B": [
+       4
+      ],
+      "Y": [
+       9
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {},
+     "port_directions": {
+      "A": "input",
+      "B": "input",
+      "Y": "output"
+     },
+     "type": "$_NAND_"
+    },
+    "$abc$109$auto$blifparse.cc:396:parse_blif$111": {
+     "attributes": {},
+     "connections": {
+      "A": [
+       3
+      ],
+      "B": [
+       9
+      ],
+      "Y": [
+       10
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {},
+     "port_directions": {
+      "A": "input",
+      "B": "input",
+      "Y": "output"
+     },
+     "type": "$_NAND_"
+    },
+    "$abc$109$auto$blifparse.cc:396:parse_blif$112": {
+     "attributes": {},
+     "connections": {
+      "A": [
+       6
+      ],
+      "B": [
+       9
+      ],
+      "Y": [
+       11
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {},
+     "port_directions": {
+      "A": "input",
+      "B": "input",
+      "Y": "output"
+     },
+     "type": "$_NAND_"
+    },
+    "$abc$109$auto$blifparse.cc:396:parse_blif$113": {
+     "attributes": {},
+     "connections": {
+      "A": [
+       10
+      ],
+      "B": [
+       11
+      ],
+      "Y": [
+       8
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {},
+     "port_directions": {
+      "A": "input",
+      "B": "input",
+      "Y": "output"
+     },
+     "type": "$_NAND_"
+    },
+    "$abc$109$auto$blifparse.cc:396:parse_blif$114": {
+     "attributes": {},
+     "connections": {
+      "A": [
+       4
+      ],
+      "B": [
+       2
+      ],
+      "Y": [
+       12
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {},
+     "port_directions": {
+      "A": "input",
+      "B": "input",
+      "Y": "output"
+     },
+     "type": "$_NAND_"
+    },
+    "$abc$109$auto$blifparse.cc:396:parse_blif$115": {
+     "attributes": {},
+     "connections": {
+      "A": [
+       10
+      ],
+      "B": [
+       12
+      ],
+      "Y": [
+       7
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {},
+     "port_directions": {
+      "A": "input",
+      "B": "input",
+      "Y": "output"
+     },
+     "type": "$_NAND_"
+    }
+   },
+   "netnames": {
+    "$abc$102$new_n10": {
+     "attributes": {},
+     "bits": [
+      13
+     ],
+     "hide_name": 1
+    },
+    "$abc$102$new_n12": {
+     "attributes": {},
+     "bits": [
+      14
+     ],
+     "hide_name": 1
+    },
+    "$abc$102$new_n8": {
+     "attributes": {},
+     "bits": [
+      15
+     ],
+     "hide_name": 1
+    },
+    "$abc$102$new_n9": {
+     "attributes": {},
+     "bits": [
+      16
+     ],
+     "hide_name": 1
+    },
+    "$abc$109$N1": {
+     "attributes": {
+      "src": "c17.v:1.19-1.21"
+     },
+     "bits": [
+      2
+     ],
+     "hide_name": 1
+    },
+    "$abc$109$N2": {
+     "attributes": {
+      "src": "c17.v:1.23-1.25"
+     },
+     "bits": [
+      3
+     ],
+     "hide_name": 1
+    },
+    "$abc$109$N22": {
+     "attributes": {
+      "src": "c17.v:1.46-1.49"
+     },
+     "bits": [
+      7
+     ],
+     "hide_name": 1
+    },
+    "$abc$109$N23": {
+     "attributes": {
+      "src": "c17.v:1.51-1.54"
+     },
+     "bits": [
+      8
+     ],
+     "hide_name": 1
+    },
+    "$abc$109$N3": {
+     "attributes": {
+      "src": "c17.v:1.27-1.29"
+     },
+     "bits": [
+      4
+     ],
+     "hide_name": 1
+    },
+    "$abc$109$N6": {
+     "attributes": {
+      "src": "c17.v:1.31-1.33"
+     },
+     "bits": [
+      5
+     ],
+     "hide_name": 1
+    },
+    "$abc$109$N7": {
+     "attributes": {
+      "src": "c17.v:1.35-1.37"
+     },
+     "bits": [
+      6
+     ],
+     "hide_name": 1
+    },
+    "$abc$109$new_n10": {
+     "attributes": {},
+     "bits": [
+      11
+     ],
+     "hide_name": 1
+    },
+    "$abc$109$new_n12": {
+     "attributes": {},
+     "bits": [
+      12
+     ],
+     "hide_name": 1
+    },
+    "$abc$109$new_n8": {
+     "attributes": {},
+     "bits": [
+      9
+     ],
+     "hide_name": 1
+    },
+    "$abc$109$new_n9": {
+     "attributes": {},
+     "bits": [
+      10
+     ],
+     "hide_name": 1
+    },
+    "N1": {
+     "attributes": {
+      "src": "c17.v:1.19-1.21"
+     },
+     "bits": [
+      2
+     ],
+     "hide_name": 0
+    },
+    "N2": {
+     "attributes": {
+      "src": "c17.v:1.23-1.25"
+     },
+     "bits": [
+      3
+     ],
+     "hide_name": 0
+    },
+    "N22": {
+     "attributes": {
+      "src": "c17.v:1.46-1.49"
+     },
+     "bits": [
+      7
+     ],
+     "hide_name": 0
+    },
+    "N23": {
+     "attributes": {
+      "src": "c17.v:1.51-1.54"
+     },
+     "bits": [
+      8
+     ],
+     "hide_name": 0
+    },
+    "N3": {
+     "attributes": {
+      "src": "c17.v:1.27-1.29"
+     },
+     "bits": [
+      4
+     ],
+     "hide_name": 0
+    },
+    "N6": {
+     "attributes": {
+      "src": "c17.v:1.31-1.33"
+     },
+     "bits": [
+      5
+     ],
+     "hide_name": 0
+    },
+    "N7": {
+     "attributes": {
+      "src": "c17.v:1.35-1.37"
+     },
+     "bits": [
+      6
+     ],
+     "hide_name": 0
+    }
+   },
+   "ports": {
+    "N1": {
+     "bits": [
+      2
+     ],
+     "direction": "input"
+    },
+    "N2": {
+     "bits": [
+      3
+     ],
+     "direction": "input"
+    },
+    "N22": {
+     "bits": [
+      7
+     ],
+     "direction": "output"
+    },
+    "N23": {
+     "bits": [
+      8
+     ],
+     "direction": "output"
+    },
+    "N3": {
+     "bits": [
+      4
+     ],
+     "direction": "input"
+    },
+    "N6": {
+     "bits": [
+      5
+     ],
+     "direction": "input"
+    },
+    "N7": {
+     "bits": [
+      6
+     ],
+     "direction": "input"
+    }
+   }
+  }
+ }
+}

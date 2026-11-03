@@ -8,13 +8,24 @@ so the research.md splits keep their cuts after mapping onto Yosys's labels.
 of two mappings; both preserve every cut, so the checks hold either way.)
 """
 
+import shutil
+
 import networkx as nx
 import pytest
+from c17_reference import C17_JSON, EXPECTED_NODES, NEAR_MISS_A, OPTIMAL_A, reference_c17
 from c17_reference import C17_V as C17
-from c17_reference import EXPECTED_NODES, NEAR_MISS_A, OPTIMAL_A, reference_c17
 from networkx.algorithms import isomorphism
 
-from project_q.parse_yosys import Hypergraph, hypergraph_from_verilog, load_hypergraph, true_cut
+from project_q.parse_yosys import (
+    Hypergraph,
+    hypergraph_from_verilog,
+    load_hypergraph,
+    load_netlist,
+    save_netlist,
+    true_cut,
+)
+
+needs_yosys = pytest.mark.skipif(shutil.which("yosys") is None, reason="Yosys not installed")
 
 
 def incidence_graph(hg: Hypergraph) -> nx.Graph:
@@ -83,6 +94,44 @@ def test_true_cut_edge_cases(c17):
     assert true_cut(c17, [1] * 6) == 0
     with pytest.raises(ValueError):
         true_cut(c17, [0] * 5)
+
+
+# --- Committed netlist (benchmarks/netlists/c17.json): the notebook's Yosys-free path ---
+
+
+@pytest.fixture(scope="module")
+def c17_saved() -> Hypergraph:
+    return load_hypergraph(load_netlist(C17_JSON))
+
+
+def test_committed_c17_netlist_works_without_yosys(c17_saved):
+    """Same Phase 1 checks as the live run, but from the committed JSON only."""
+    assert c17_saved.num_nodes == 6
+    assert len(c17_saved.nets) == 5
+    mapping = node_mapping(reference_c17(), c17_saved)
+    for a, expected in [(OPTIMAL_A, 2), (NEAR_MISS_A, 3)]:
+        assert true_cut(c17_saved, {mapping[r]: int(r not in a) for r in EXPECTED_NODES}) == expected
+
+
+def test_committed_netlist_has_no_machine_paths():
+    # Yosys `src` attributes must be relative ("c17.v:1.1-9.10") so the file is identical on every machine.
+    text = C17_JSON.read_text()
+    assert "/home/" not in text and ":\\" not in text
+
+
+@needs_yosys
+def test_committed_netlist_matches_live_yosys(c17, c17_saved):
+    """Catches drift: if c17.v or the Yosys script changes, re-run scripts/export_netlists.py."""
+    assert c17_saved.nodes == c17.nodes
+    assert c17_saved.nets == c17.nets
+    assert c17_saved.net_names == c17.net_names
+
+
+def test_save_load_netlist_roundtrip(tmp_path):
+    netlist = load_netlist(C17_JSON)
+    out = save_netlist(netlist, tmp_path / "sub" / "x.json")
+    assert load_netlist(out) == netlist
+    assert out.read_text() == C17_JSON.read_text()  # stable formatting -> clean git diffs
 
 
 def test_load_hypergraph_filters_and_ignores_unknown_fields():

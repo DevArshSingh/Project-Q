@@ -92,16 +92,41 @@ def run_yosys(verilog_path: str | Path, top: str | None = None) -> dict:
     top_opt = f"-top {top}" if top else "-auto-top"
     with tempfile.TemporaryDirectory() as tmp:
         out_json = Path(tmp) / "netlist.json"
+        # Run from the file's folder and read it by bare name, so the `src`
+        # attributes Yosys writes say "c17.v:1.1-9.10", not an absolute path
+        # from this machine. That keeps committed netlists identical everywhere.
         script = (
-            f'read_verilog "{verilog_path}"; '
+            f'read_verilog "{verilog_path.name}"; '
             f"synth -flatten {top_opt}; "
             "abc -g NAND; "
             f'write_json "{out_json}"'
         )
-        result = subprocess.run(["yosys", "-q", "-p", script], capture_output=True, text=True)
+        result = subprocess.run(
+            ["yosys", "-q", "-p", script], capture_output=True, text=True, cwd=verilog_path.parent
+        )
         if result.returncode != 0:
             raise RuntimeError(f"Yosys failed on {verilog_path}:\n{result.stderr or result.stdout}")
         return json.loads(out_json.read_text())
+
+
+def save_netlist(netlist: dict, path: str | Path) -> Path:
+    """Write Yosys JSON to `path` (e.g. benchmarks/netlists/c17.json).
+
+    Why cache it: the notebook must run on machines without Yosys (judges,
+    Windows laptops). The committed JSON is exactly what `run_yosys` returned,
+    so `load_hypergraph(load_netlist(path))` gives the same hypergraph as a
+    live Yosys run (a test checks this whenever Yosys is installed).
+    sort_keys + indent keep the file stable, so git diffs show real changes only.
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(netlist, indent=1, sort_keys=True) + "\n")
+    return path
+
+
+def load_netlist(path: str | Path) -> dict:
+    """Read a saved Yosys JSON netlist (no Yosys needed)."""
+    return json.loads(Path(path).read_text())
 
 
 def _top_module(netlist: dict) -> tuple[str, dict]:
