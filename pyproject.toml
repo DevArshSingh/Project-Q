@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "project-q"
+version = "0.1.0"
+description = "Verilog -> hypergraph -> QUBO -> QAOA circuit partitioning with an honest classical scorecard"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+# Dependencies live in requirements.txt (installed separately) so the package
+# install stays fast and does not fight with the venv's resolver.
+dependencies = []
+
+[project.scripts]
+project-q = "project_q.cli:main"
+
+[tool.setuptools]
+packages = ["project_q"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

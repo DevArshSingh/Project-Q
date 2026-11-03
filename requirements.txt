@@ -1,0 +1,14 @@
+# Project Q runtime + test dependencies.
+# Unpinned during development; pinned from `pip freeze` in Phase 9.
+qiskit
+qiskit-aer
+qiskit-ibm-runtime
+qiskit-addon-opt-mapper
+networkx
+numpy
+scipy
+matplotlib
+pytest
+
+# Optional: KaHyPar baseline. If it fails to install, the KL baseline is used instead (see SPEC.md).
+# kahypar
