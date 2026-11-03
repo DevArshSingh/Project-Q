@@ -5,7 +5,7 @@ You are building Project Q. Follow these phases IN ORDER. `SPEC.md` defines what
 ## Working rules (apply to every phase)
 1. Start each phase by stating the plan in a few lines, then implement.
 2. Write tests first or alongside. Run `pytest -q`. A phase is done only when its **Done when** checks pass.
-3. After a phase: show a short summary + the test output, `git add -A && git commit` (one commit per phase), then STOP and wait for the user to say "next".
+3. After a phase: show a short summary + the test output, `git add -A && git commit` on `main` (one commit per phase; no branches for now), then STOP and wait for the user to say "next".
 4. If a **Gate** fails, fix it before anything else. Do not skip ahead.
 5. Keep code simple and commented (the team is new to quantum + EDA). Add a short "why" comment on every non-obvious formula.
 6. Do not invent library APIs. Check the installed version (`pip show qiskit qiskit-aer qiskit-addon-opt-mapper qiskit-ibm-runtime`) and read its docstrings/docs before using it. If `qiskit-addon-opt-mapper` misbehaves, build the Ising Hamiltonian (SparsePauliOp) by hand from the QUBO.
@@ -28,12 +28,13 @@ You are building Project Q. Follow these phases IN ORDER. `SPEC.md` defines what
 - **Done when:** c17 gives 6 nodes and the 4 internal nets from `docs/research.md` section 3 (N10, N11, N16, N19); `true_cut` of A={g10,g16,g22}, B={g11,g19,g23} is 2.
 
 ## Phase 2: QUBO + brute force (`project_q/qubo.py`, `solvers.py`) → GATE 1
-- `build_partition_qubo(hg, lam) -> QUBO` (store as dict `{(i,j): coeff}` + constant). Terms per SPEC (exact for 2 and 3-cell nets, pair approximation 1/(n-1) for 4–8, drop larger). Balance term `lam * (sum(w_i x_i) - W/2)^2`, expanded into linear/quadratic terms.
+- `build_partition_qubo(hg, lam=2.0) -> QUBO` (store as dict `{(i,j): coeff}` + constant). Terms per SPEC (exact for 2 and 3-cell nets, pair approximation 1/(n-1) for 4–8, drop larger). Balance term `lam * (sum(w_i x_i) - W/2)^2`, expanded into linear/quadratic terms.
 - `qubo_energy(qubo, bits)` evaluator.
-- `brute_force(hg, qubo)`: enumerate all 2^n assignments (n ≤ 24); return best balanced assignment by true cut, plus the lowest-QUBO-energy assignment.
+- `is_balanced(hg, assignment, eps=0.03)` per the SPEC "Balance definition", in `parse_yosys.py` next to `true_cut` (pure Python, independent of QUBO code). Every balance check in the project goes through it.
+- `brute_force(hg, qubo)`: enumerate all 2^n assignments, vectorized with numpy (build the bit matrix for a chunk of assignments, compute energies and true cuts as array ops). Default `max_n=20`; raise `ValueError` above that unless `allow_large=True` (hard cap 24). Return best balanced assignment by true cut, plus the lowest-QUBO-energy assignment. Test: vectorized results equal a plain-Python loop on c17.
 - Also implement `random_balanced`, `simulated_annealing` (on the QUBO), `kernighan_lin` (networkx on a clique-expanded graph, then evaluate with `true_cut`).
 - Tests: for every one of the 64 c17 assignments, QUBO energy minus balance term equals `true_cut` for exact nets (this is the formula check); the minimum-energy assignment is balanced with true cut 2.
-- **GATE 1 done when:** hypergraph, QUBO energy and brute force all agree on c17 (cut 2, balanced 3/3). Print a table of all 20 balanced splits with cut. Report in the summary.
+- **GATE 1 done when:** hypergraph, QUBO energy and brute force all agree on c17 (cut 2, balanced 3/3), and at λ=2.0 the energy gap ΔE = min{E(x) : x not optimal} − E* is asserted strictly > 0 (expected 1.0). Also print ΔE at λ=1.0 (expected 0) to show why the default is 2.0. Print a table of all 20 balanced splits with cut. Report in the summary.
 
 ## Phase 3: QUBO → Hamiltonian → QAOA on Aer (`solvers.py`) → GATE 2 (part 1)
 - Convert QUBO to Ising (x = (1−z)/2) → `SparsePauliOp` (via opt-mapper or by hand). Unit test: Hamiltonian expectation for each basis state equals `qubo_energy` (up to the constant offset).
@@ -43,8 +44,9 @@ You are building Project Q. Follow these phases IN ORDER. `SPEC.md` defines what
 
 ## Phase 4: Scorecard + CLI (`scorecard.py`, `cli.py`)
 - `ScoreRecord` dataclass matching the SPEC JSON (design, solver, k, cut, best_known_cut, gap_percent, balance_ratio, qubits, shots, runtime_s, plus `backend`, `lambda`, `p`, `seed`). Save one JSON per run to `results/`.
-- CLI: `python -m project_q.cli partition <file.v> --solver {brute,random,sa,kl,kahypar,qaoa} --lam 1.0 --p 1 --shots 4000 --seed 0` and `... benchmark <file.v>` which runs all solvers and prints a comparison table.
-- **Done when:** `benchmark benchmarks/c17.v` prints a table of all solvers and writes JSON.
+- CLI: `python -m project_q.cli partition <file.v> --solver {brute,random,sa,kl,kahypar,qaoa} --lam 2.0 --eps 0.03 --p 1 --shots 4000 --seed 0` and `... benchmark <file.v>` which runs all solvers and prints a comparison table.
+- Last step: fetch ISCAS-85 `c432.v` and `c880.v` into `benchmarks/`, record their source URLs in `benchmarks/SOURCES.md`, and check that they parse through Yosys (print node and net counts). If the network is blocked, ask the user to supply them.
+- **Done when:** `benchmark benchmarks/c17.v` prints a table of all solvers and writes JSON; c432/c880 are in `benchmarks/` and parse.
 
 ## Phase 5: Coarsening + FM refinement (`project_q/coarsen.py`) → GATE 2 (part 2)
 - Coarsen: heavy-edge matching (merge pairs of nodes sharing the most nets) repeatedly until ≤ target (default 20) supernodes. Supernodes carry weights; QUBO balance uses weights.
@@ -53,10 +55,10 @@ You are building Project Q. Follow these phases IN ORDER. `SPEC.md` defines what
 - **GATE 2 done when:** QAOA matches brute force on a ~12-node coarsened circuit (create it by coarsening c432 to 12, or use a small EPFL circuit). Report. If it does not, tune λ/p/restarts before moving on; if still failing, say so honestly.
 
 ## Phase 6: Benchmarks, ablation, λ sweep, plots
-- Download/put ISCAS-85 `c432.v`, `c880.v` in `benchmarks/` (the user may need to supply them if network is blocked; ask).
+- Uses `c432.v`, `c880.v` fetched at the end of Phase 4.
 - Run all solvers × c17, c432, c880 via multilevel where n > 24. Save results table (`results/summary.csv`).
 - **Ablation:** same multilevel pipeline with coarse solver = random / SA / brute / QAOA. Plot cut per variant (`plots/ablation.png`). State plainly if random+FM matches QAOA+FM.
-- **λ sweep:** λ ∈ {0.1, 0.3, 1, 3, 10} on c17 and one coarsened design; plot cut vs balance and feasible rate (`plots/lambda_sweep.png`).
+- **λ sweep:** λ ∈ {0.1, 0.3, 1, 2, 3, 10} (includes the default 2.0) on c17 and one coarsened design; plot cut vs balance and feasible rate (`plots/lambda_sweep.png`).
 - **Partition picture:** draw the hypergraph colored by group (`plots/partition_c17.png`).
 - **Done when:** all three plots + `summary.csv` exist and the numbers come from real runs.
 
@@ -68,7 +70,7 @@ You are building Project Q. Follow these phases IN ORDER. `SPEC.md` defines what
 ## Phase 8: Single IBM hardware run (needs explicit user go-ahead)
 Budget: ~10 minutes of QPU time TOTAL, so do exactly one small job after everything else works.
 1. Ask the user for confirmation and for the token to be set as `QISKIT_IBM_TOKEN` (never write it to a file in the repo). Check it with `QiskitRuntimeService` and list available backends sorted by least busy.
-2. Choose the c17 partition (6 qubits, p=1) with the optimal γ, β already found on Aer. Do NOT optimize on hardware. Fixed parameters, one Sampler job.
+2. Choose the c17 partition (6 qubits, p=1) with the optimal γ, β already found on Aer (at the default λ = 2.0). Do NOT optimize on hardware. Fixed parameters, one Sampler job.
 3. Transpile for the chosen backend (`generate_preset_pass_manager(optimization_level=3, backend=backend)`); print depth and 2-qubit gate count first. If depth looks large, stop and tell the user.
 4. Run with 4000 shots (or fewer if the estimate of runtime is large; print the estimate and ask). Use Job mode (not Session) on the open plan.
 5. Report: counts, feasible rate (balanced shots), probability of optimal split, best balanced cut vs Aer result, plus a side-by-side bar chart of Aer vs hardware distributions (`plots/hardware_vs_aer.png`). Save raw counts and the job ID to `results/hardware_c17.json`. Report numbers as they are, even if noise dominates.
