@@ -8,34 +8,13 @@ so the research.md splits keep their cuts after mapping onto Yosys's labels.
 of two mappings; both preserve every cut, so the checks hold either way.)
 """
 
-from pathlib import Path
-
 import networkx as nx
 import pytest
+from c17_reference import C17_V as C17
+from c17_reference import EXPECTED_NODES, NEAR_MISS_A, OPTIMAL_A, reference_c17
 from networkx.algorithms import isomorphism
 
 from project_q.parse_yosys import Hypergraph, hypergraph_from_verilog, load_hypergraph, true_cut
-
-C17 = Path(__file__).resolve().parents[1] / "benchmarks" / "c17.v"
-
-# docs/research.md section 3: the 4 internal nets of c17, plus input pin N3,
-# which feeds two gates and so is a real (cuttable) net.
-EXPECTED_NODES = ["g10", "g11", "g16", "g19", "g22", "g23"]
-EXPECTED_NETS = {
-    "N3": {"g10", "g11"},
-    "N10": {"g10", "g22"},
-    "N11": {"g11", "g16", "g19"},
-    "N16": {"g16", "g22", "g23"},
-    "N19": {"g19", "g23"},
-}
-
-
-def reference_c17() -> Hypergraph:
-    return Hypergraph(
-        nodes=EXPECTED_NODES,
-        nets=[frozenset(s) for s in EXPECTED_NETS.values()],
-        net_names=list(EXPECTED_NETS),
-    )
 
 
 def incidence_graph(hg: Hypergraph) -> nx.Graph:
@@ -65,10 +44,6 @@ def node_mapping(reference: Hypergraph, actual: Hypergraph) -> dict[str, str]:
     )
     assert gm.is_isomorphic(), "Yosys c17 hypergraph is not isomorphic to the research.md one"
     return {r[1]: a[1] for r, a in gm.mapping.items() if r[0] == "node"}
-
-
-OPTIMAL_A = {"g10", "g11", "g22"}  # unique optimal balanced split (cut 2)
-NEAR_MISS_A = {"g10", "g16", "g22"}  # cuts N3, N11, N16 (cut 3)
 
 
 def test_c17_has_6_nodes_and_5_nets(c17):

@@ -19,6 +19,7 @@ taken from the net it drives (an output port name like `N22` when possible).
 from __future__ import annotations
 
 import json
+import math
 import re
 import subprocess
 import tempfile
@@ -33,6 +34,8 @@ _CONSTANT_BITS = {"0", "1", "x", "z"}
 _ABC_PREFIX = re.compile(r"^\$abc\$\d+\$")
 
 DEFAULT_MAX_NET_SIZE = 50
+# Allowed imbalance ε (SPEC "Balance definition"); 3% is the usual hMETIS/KaHyPar value.
+DEFAULT_EPS = 0.03
 
 
 @dataclass
@@ -221,3 +224,28 @@ def true_cut(hg: Hypergraph, assignment: Mapping[str, int] | Sequence[int]) -> i
     """
     side = _side(hg, assignment)
     return sum(1 for net in hg.nets if len({side[n] for n in net}) > 1)
+
+
+def side_weights(hg: Hypergraph, assignment: Mapping[str, int] | Sequence[int]) -> tuple[int, int]:
+    """(w(A), w(B)) where A = nodes with value 0 and B = nodes with value 1."""
+    side = _side(hg, assignment)
+    w_b = sum(hg.weights[n] for n in hg.nodes if side[n])
+    return hg.total_weight - w_b, w_b
+
+
+def balance_bound(hg: Hypergraph, eps: float = DEFAULT_EPS) -> float:
+    """Largest side weight a balanced split may have: ⌈W/2⌉·(1+ε)."""
+    return math.ceil(hg.total_weight / 2) * (1 + eps)
+
+
+def is_balanced(
+    hg: Hypergraph, assignment: Mapping[str, int] | Sequence[int], eps: float = DEFAULT_EPS
+) -> bool:
+    """Hard balance rule (SPEC "Balance definition"): max(w(A), w(B)) ≤ ⌈W/2⌉·(1+ε).
+
+    Every feasibility check in the project goes through this one function.
+    The ⌈W/2⌉ matters for odd W: with 5 unit gates a 3/2 split is the best
+    possible, so it must count as balanced even at ε = 0. On c17 (W=6,
+    ε=0.03) the bound is 3.09, so only 3/3 splits pass.
+    """
+    return max(side_weights(hg, assignment)) <= balance_bound(hg, eps)
