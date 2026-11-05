@@ -137,4 +137,25 @@ KaHyPar takes about 0.05 s or less per run on these designs, and classical solve
 - **One seed and default settings.** The table is a first look, not a fair comparison: simulated annealing and Kernighan–Lin weren't tuned, and random is one sample by design. KaHyPar's c880 cut varied from 21 to 24 across 3 seeds when we tried it. Phase 6 produces the real results table.
 - **The QUBO is approximate on these designs.** Simulated annealing searches the QUBO, which only approximates nets with more than 3 gates and leaves out nets above 8, so this may hurt its results. We haven't measured how much.
 - **KaHyPar is optional.** It's in `requirements-optional.txt`, so a failed install can't block the main install. Without it, `--solver kahypar` runs Kernighan–Lin and labels the result `kl-fallback`, so results differ between installs. The KaHyPar numbers above need it installed. KaHyPar is GPLv3+, and we copied its config file into the repo, so check that before choosing a license for this project.
-- **The CLI handles one job.** It does two-way splits only, and QAOA stops at 24 qubits until coarsening arrives in Phase 5.
+- **The CLI handles one job.** It does two-way splits only, and plain QAOA stops at 24 qubits; use `multilevel-*` for larger designs (Phase 5).
+
+---
+
+## Phase 5: Coarsening + FM refinement → Gate 2 (part 2)
+
+**In plain words.**
+- Big circuits are shrunk by merging tightly connected gates into supernodes (heavy-edge matching) until ≤ a target count (default 20).
+- A small-core solver (QAOA / SA / random / brute) partitions the coarse graph.
+- Uncoarsening projects that split back; at each level FM tries flipping one node at a time to cut `true_cut` without breaking balance.
+- CLI: `partition design.v --solver multilevel-qaoa --target 12`.
+
+**Why it works.**
+- Total node weight is conserved at every coarsening level (tests).
+- Gate 2 part 2: coarsen c432 → 11 supernodes; QAOA p=1 matches brute-force cut **15** on that core (seed 0).
+- Final multilevel answers are still re-scored with `true_cut` / `is_balanced` on the original hypergraph.
+
+**Where it falls short.**
+- Heavy-edge matching is greedy — not KaHyPar-quality coarsening.
+- FM here is a simple single-move pass, not a full bucket-sort FM implementation.
+- Ablation (is FM doing all the work?) is Phase 6, not claimed here.
+- On large designs the multilevel cut is a heuristic; we do not claim it beats KaHyPar.

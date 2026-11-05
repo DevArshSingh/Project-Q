@@ -52,3 +52,13 @@ A: Solvers don't report their own score. `make_record` recomputes the cut from e
 **Q: KaHyPar gets cut 11 on c432 in about 0.03 s, and QAOA can't even run on it. Why use QAOA at all?**
 A: For partitioning today, you should use KaHyPar, and our scorecard shows that plainly. Our contribution is the bridge from Verilog to a quantum-ready problem, plus an honest way to compare solvers on it. That lets a hardware engineer measure whether quantum solvers ever catch up. We don't claim quantum advantage. Note that 11 is the best cut found in that run, not a proven optimum.
 
+---
+
+## Phase 5: Coarsening + FM → Gate 2 (part 2)
+
+**Q: How do you run QAOA on a 187-gate circuit when you only have 24 qubits?**
+A: Multilevel: heavy-edge matching merges gates that share many nets into weighted supernodes until ≤ ~12–20 remain. QAOA (or SA/random/brute) solves that small core; then we project the split back level by level and run Fiduccia–Mattheyses (FM) single-node moves that lower `true_cut` while keeping balance. CLI: `--solver multilevel-qaoa`.
+
+**Q: Is QAOA doing the work, or is FM?**
+A: Fair question — Phase 6's ablation swaps the coarse solver for random/SA/brute with the same FM. Gate 2 part 2 only checks that QAOA matches brute force on the coarsened ~12-node core itself (before blaming FM).
+

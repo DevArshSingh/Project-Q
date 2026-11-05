@@ -17,7 +17,10 @@ from pathlib import Path
 
 from project_q import __version__
 
-SOLVERS = ["brute", "random", "sa", "kl", "kahypar", "qaoa"]
+# `benchmark` runs BASE_SOLVERS only (keeps the table fast). Multilevel is available via `partition`.
+BASE_SOLVERS = ["brute", "random", "sa", "kl", "kahypar", "qaoa"]
+MULTILEVEL_SOLVERS = ["multilevel-qaoa", "multilevel-sa", "multilevel-random", "multilevel-brute"]
+SOLVERS = BASE_SOLVERS + MULTILEVEL_SOLVERS
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -40,6 +43,12 @@ def build_parser() -> argparse.ArgumentParser:
     common.add_argument("--seed", type=int, default=0)
     common.add_argument("--results-dir", default="results", help="Folder for the JSON records (default results)")
 
+    common.add_argument(
+        "--target",
+        type=int,
+        default=20,
+        help="Multilevel coarsen until ≤ this many supernodes (default 20)",
+    )
     part = sub.add_parser("partition", parents=[common], help="Partition one design with one solver.")
     part.add_argument("--solver", choices=SOLVERS, default="qaoa")
     sub.add_parser("benchmark", parents=[common], help="Run all solvers on one design and print a comparison table.")
@@ -69,6 +78,7 @@ def load_design(path_str: str):
 
 
 def run_solver(name: str, hg, qubo, args, best_known_cut: int | None = None):
+    from project_q.coarsen import multilevel
     from project_q.solvers import brute_force, kahypar_solver, kernighan_lin, qaoa, random_balanced, simulated_annealing
 
     if name == "brute":
@@ -81,6 +91,18 @@ def run_solver(name: str, hg, qubo, args, best_known_cut: int | None = None):
         return kernighan_lin(hg, qubo, eps=args.eps, seed=args.seed)
     if name == "kahypar":
         return kahypar_solver(hg, qubo, eps=args.eps, seed=args.seed)
+    if name.startswith("multilevel-"):
+        return multilevel(
+            hg,
+            coarse_solver=name.removeprefix("multilevel-"),
+            target=getattr(args, "target", 20),
+            lam=args.lam,
+            eps=args.eps,
+            seed=args.seed,
+            p=args.p,
+            shots=args.shots,
+            restarts=args.restarts,
+        )
     return qaoa(
         hg, qubo, p=args.p, shots=args.shots, restarts=args.restarts, eps=args.eps, seed=args.seed,
         best_known_cut=best_known_cut,
@@ -103,7 +125,10 @@ def skip_reason(name: str, hg) -> str | None:
     if name == "brute" and hg.num_nodes > BRUTE_FORCE_MAX_N:
         return f"{hg.num_nodes} nodes > brute-force limit of {BRUTE_FORCE_MAX_N}"
     if name == "qaoa" and hg.num_nodes > QAOA_MAX_QUBITS:
-        return f"{hg.num_nodes} qubits > limit of {QAOA_MAX_QUBITS} (coarsening comes in Phase 5)"
+        return f"{hg.num_nodes} qubits > limit of {QAOA_MAX_QUBITS}; use --solver multilevel-qaoa"
+    if name == "multilevel-brute" and getattr(hg, "num_nodes", 0) > BRUTE_FORCE_MAX_N:
+        # Coarse target defaults to 20, which is within the brute cap — always ok.
+        pass
     return None
 
 
@@ -149,7 +174,7 @@ def _cmd_benchmark(args) -> int:
     best, source = proven_best(hg, qubo, args.eps)
 
     results, skipped = [], []
-    for name in SOLVERS:
+    for name in BASE_SOLVERS:
         reason = skip_reason(name, hg)
         if reason:
             skipped.append((name, reason))

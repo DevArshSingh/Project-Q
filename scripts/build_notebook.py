@@ -123,6 +123,30 @@ for cut, energy, a, b in rows:
     print(f"{', '.join(a):<26} {', '.join(b):<26} {cut:>3}  {energy:6.1f}")
 print(f"\\n{len(rows)} balanced splits")"""),
     ("md", """**What this shows, and what it doesn't.** The QUBO encodes c17's partitioning problem exactly: its lowest energy is the true best balanced split, by a clear margin. It says nothing yet about whether QAOA *finds* that state; that is the next section. c17 is tiny, so brute force, simulated annealing and Kernighan–Lin all solve it instantly."""),
+    # ---------------------------------------------------------------- 5 coarsen
+    ("md", """## 5. Scaling up: coarsen → solve → FM (Gate 2 part 2)
+
+c432 has ~187 gates — too many qubits for Aer. **Multilevel** shrinks it:
+
+1. **Heavy-edge matching** merges gates that share nets into weighted supernodes until ≤ 12 remain.
+2. **QAOA** (or brute force) partitions that tiny core.
+3. **FM refinement** projects the split back and flips one node at a time if that lowers `true_cut` without breaking balance.
+
+Gate 2 part 2: on the coarsened core, QAOA must match brute force."""),
+    ("code", """from project_q.coarsen import coarsen
+from project_q.solvers import qaoa
+
+c432 = load_hypergraph(load_netlist(ROOT / "benchmarks" / "netlists" / "c432.json"))
+hier = coarsen(c432, target=12)
+core = hier.coarsest
+print(f"c432: {c432.num_nodes} gates → {core.num_nodes} supernodes (W={core.total_weight})")
+
+core_qubo = build_partition_qubo(core)
+bf_core = brute_force(core, core_qubo)
+qa_core = qaoa(core, core_qubo, p=1, shots=4000, restarts=8, seed=0)
+print(f"core brute cut={bf_core.best_cut}, QAOA cut={qa_core.cut}, balanced={qa_core.balanced}")
+assert qa_core.balanced and qa_core.cut == bf_core.best_cut
+print("Gate 2 (part 2) on coarsened c432: PASS")"""),
 ]
 
 

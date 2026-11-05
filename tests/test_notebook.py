@@ -37,13 +37,15 @@ def test_notebook_runs_without_yosys(monkeypatch):
     # exactly like a judge's laptop. Yosys lives in /usr/bin, which is not included.
     monkeypatch.setenv("PATH", str(Path(sys.executable).parent))
     nb = nbformat.read(NOTEBOOK, as_version=4)
-    ExecutePreprocessor(timeout=300, kernel_name="python3").preprocess(nb, {"metadata": {"path": str(NOTEBOOK.parent)}})
+    # Phase 5 runs QAOA on an ~12-node coarsened c432 core; allow headroom.
+    ExecutePreprocessor(timeout=600, kernel_name="python3").preprocess(nb, {"metadata": {"path": str(NOTEBOOK.parent)}})
 
     text = "\n".join(o.get("text", "") for c in nb.cells if c.cell_type == "code" for o in c.outputs)
     assert "Yosys not installed" in text
     assert "64/64" in text
     assert "λ = 2.0: best balanced cut 2, lowest-energy state is optimal: True, ΔE = 1.0" in text
     assert "20 balanced splits" in text
+    assert "Gate 2 (part 2) on coarsened c432: PASS" in text
 
 
 if __name__ == "__main__":
