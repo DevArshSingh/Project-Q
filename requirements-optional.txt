@@ -1,0 +1,6 @@
+# Optional extras, kept out of requirements.txt so a failed install can't block the main one.
+# Install with: uv pip install -r requirements-optional.txt
+#
+# KaHyPar baseline (tested with 1.3.7). Without it, `--solver kahypar` runs Kernighan-Lin
+# and labels the result `kl-fallback` (see SPEC.md). On Windows, install inside WSL.
+kahypar

@@ -16,6 +16,4 @@ nbformat
 nbconvert
 ipykernel
 
-# KaHyPar baseline (tested with 1.3.7). If it can't be installed, remove this line: `--solver kahypar` then
-# runs KL and labels the result `kl-fallback` (see SPEC.md). On Windows, install inside WSL.
-kahypar
+# KaHyPar is optional, so it lives in requirements-optional.txt: a failed install there can't block this file.

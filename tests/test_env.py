@@ -3,6 +3,7 @@
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -36,6 +37,17 @@ def test_notebook_tooling_imports():
 def test_opt_mapper_import():
     # Optional by design: if the add-on breaks, we build the Hamiltonian by hand (SPEC.md).
     pytest.importorskip("qiskit_addon_opt_mapper")
+
+
+def test_kahypar_stays_out_of_the_main_requirements():
+    # A failed KaHyPar install must not break `pip install -r requirements.txt` for judges or Colab.
+    root = Path(__file__).resolve().parents[1]
+    packages = {
+        line.split("#")[0].strip().lower()
+        for line in (root / "requirements.txt").read_text(encoding="utf-8").splitlines()
+    }
+    assert "kahypar" not in packages
+    assert "kahypar" in (root / "requirements-optional.txt").read_text(encoding="utf-8").splitlines()
 
 
 def test_yosys_available():
