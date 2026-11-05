@@ -16,5 +16,4 @@ nbformat
 nbconvert
 ipykernel
 
-# Optional: KaHyPar baseline. If it fails to install, the KL baseline is used instead (see SPEC.md).
-# kahypar
+# KaHyPar is optional, so it lives in requirements-optional.txt: a failed install there can't block this file.

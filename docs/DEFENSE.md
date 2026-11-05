@@ -14,7 +14,7 @@ We make no claim of quantum advantage anywhere.
 
 **Where it falls short.**
 - Dependencies are not pinned yet (planned for Phase 9), so a fresh install could pull newer, incompatible versions.
-- opt-mapper is at version 0.1.0, very new. Importing it works, but it has not been used yet.
+- opt-mapper is at version 0.1.0, very new. From Phase 3 we use it to build the Hamiltonian, and tests check its output (see Phase 3).
 - Yosys is a system install, and we don't check its version.
 
 ---
@@ -61,3 +61,80 @@ We make no claim of quantum advantage anywhere.
   - networkx's Kernighan–Lin balances node counts and ignores node weights.
   - Random uses one sample by default (the floor).
 - **c17 proves very little.** It is tiny, so brute force, simulated annealing and Kernighan–Lin all find the optimum. Gate 1 shows the formula is right; it says nothing yet about how well QAOA does.
+
+---
+
+## Phase 3: QUBO → Hamiltonian → QAOA on Aer → Gate 2, part 1
+
+**In plain words.**
+- A Hamiltonian is the QUBO's energy formula rewritten in the language qubits use. A qubit reads Z = +1 or −1 instead of a bit 0 or 1.
+- QAOA is a short quantum circuit with adjustable angles. It starts with every split equally likely, then shifts probability toward low-energy splits.
+- p is how many times that shifting step repeats. Each repeat adds one angle pair, γ and β.
+- A classical optimizer (COBYLA) tries angles on the simulator and keeps those giving the lowest average energy.
+- We then measure the circuit 4000 times. Each measurement ("shot") gives one split.
+- Our answer is the balanced shot with the lowest true cut, not the most common shot.
+- This all runs on the Aer simulator, with no noise. No IBM hardware was used.
+
+**Results on c17 (5 seeds, 4000 shots, λ = 2.0, 20 restarts).** Run `python scripts/phase3_c17.py` to reproduce them.
+
+| | Average energy ⟨E⟩ | Balanced shots | Optimal shots | Found cut 2 |
+|---|---|---|---|---|
+| Uniform random guessing | 6.000 | 31.2% | 3.1% | not run |
+| QAOA p=1 (mean) | 4.217 | 62.4% | 9.2% | 5/5 |
+| QAOA p=2 (mean) | 3.557 | 82.4% | 18.0% | 5/5 |
+
+**Does p=2 help?** On c17, yes on average, in all three measures. It takes about 4 times as long (about 15–23 s vs 4–5 s), and the size of the gain depends on the seed: its optimal rate ranged from 10.7% to 24.7%.
+
+**Why it works.**
+- **Hamiltonian.** `qiskit-addon-opt-mapper` substitutes x = (1−z)/2. Because that library is at version 0.1.0, the tests check its output against `qubo_energy`: on all 64 c17 states (hand-written and Yosys versions), and on a random QUBO with linear terms. The second check matters because c17's Hamiltonian has only ZZ terms, so c17 alone could not reveal a flipped sign.
+- **Energy.** Aer's Estimator matches an exact `Statevector` calculation.
+- **Angles.** A separate grid scan of γ and β puts the true p=1 minimum at about 4.03, and a test checks that seed 0 reaches it.
+- **Answers.** Every answer is re-scored by `true_cut` and `is_balanced`, never by energy.
+
+**Where it falls short.**
+- **"Found cut 2" proves almost nothing on c17.** There are only 64 states and 2 are optimal, so 4000 uniform random shots would almost surely include an optimum. The meaningful result is the higher rate of good shots compared with guessing.
+- **Beating uniform guessing is a low bar.** We have not yet compared QAOA's sampling with simulated annealing's, and c17 is easy for every classical solver here. This is not quantum advantage.
+- **The optimizer can miss the best angles.** One COBYLA start at p=1 reaches the minimum only about 15% of the time, so even 20 starts should miss about 4% of the time. p=1 seed 4 did miss, stopping at ⟨E⟩ = 4.982. We don't know the true p=2 minimum because we did not scan it.
+- **Lowest energy is not the same as most optimal shots.** The optimizer lowers average energy only. At p=2, seed 0 had lower energy than seed 2 (3.439 vs 3.482) but fewer optimal shots (15.6% vs 24.7%).
+- **Only 6 qubits so far.** Larger designs are untested, so Gate 2 stays open until the ~12-node check in Phase 5. The balance penalty couples every pair of qubits (15 terms on c17), so the circuit grows quickly with size and could be hard to run on real hardware.
+- **Simulator only.** These results have no noise, so hardware results may be much worse.
+- **The mirror split is the same answer.** The Hamiltonian cannot tell a split from its mirror image, so "optimal shots" counts both.
+
+---
+
+## Phase 4: Scorecard, CLI and larger benchmarks
+
+**In plain words.**
+- There is now one command to run: `partition` uses one solver, and `benchmark` runs them all and prints a table.
+- Each run saves one JSON file, called a record: the cut, how far it is from the best known cut (the gap), whether it's balanced, and the runtime.
+- A solver can't mark its own work. The record recomputes the cut from the final split, using the same `true_cut` for every solver.
+- We added two larger circuits, c432 (187 gates) and c880 (480 gates). QAOA can't run on them yet because they need far more than our 24-qubit limit.
+- We also added KaHyPar, an industry-grade classical partitioner, as the strongest baseline.
+
+**Results from `benchmark` (seed 0).**
+
+| Solver | c17 cut | c432 cut | c880 cut |
+|---|---|---|---|
+| Random (one split) | 3 | 123 | 282 |
+| Simulated annealing | 2 | 15 | 65 |
+| Kernighan–Lin | 2 | 21 | 42 |
+| KaHyPar | 2 | 11 | 21 |
+| Brute force | 2 | skipped | skipped |
+| QAOA, p=1 | 2 | skipped | skipped |
+
+KaHyPar takes about 0.05 s or less per run on these designs, and classical solvers win clearly on the larger ones. The only proven optimum here is c17's.
+
+**Why it works.**
+- Tests check that a record recomputes the cut even when a solver reports a wrong one, and that every number in a saved c17 record follows from its assignment.
+- `gap_percent` is left empty for an unbalanced split, because breaking the balance rule could otherwise look like beating the best answer.
+- `balance_ratio` agrees with `is_balanced` on all 64 c17 states.
+- KaHyPar's own cut matched `true_cut` when we tried it, and its answers are re-scored like everyone else's.
+- The committed c432 and c880 netlists match a live Yosys run, and tests check their node and net counts.
+
+**Where it falls short.**
+- **"Best known" on large designs isn't proven.** Brute force can't run on them, so the gap compares against the best cut found in the same run. The output says so, and the record marks it `best_of_this_run`.
+- **The new benchmarks aren't the original ISCAS files.** The source repository re-synthesized them with Cadence Genus, and Yosys and ABC then re-synthesize them again. Our cuts can't be compared directly with published results, and GitHub reported no license for that repository.
+- **One seed and default settings.** The table is a first look, not a fair comparison: simulated annealing and Kernighan–Lin weren't tuned, and random is one sample by design. KaHyPar's c880 cut varied from 21 to 24 across 3 seeds when we tried it. Phase 6 produces the real results table.
+- **The QUBO is approximate on these designs.** Simulated annealing searches the QUBO, which only approximates nets with more than 3 gates and leaves out nets above 8, so this may hurt its results. We haven't measured how much.
+- **KaHyPar is optional.** It's in `requirements-optional.txt`, so a failed install can't block the main install. Without it, `--solver kahypar` runs Kernighan–Lin and labels the result `kl-fallback`, so results differ between installs. The KaHyPar numbers above need it installed. KaHyPar is GPLv3+, and we copied its config file into the repo, so check that before choosing a license for this project.
+- **The CLI handles one job.** It does two-way splits only, and QAOA stops at 24 qubits until coarsening arrives in Phase 5.
