@@ -31,3 +31,13 @@ A: On c17 we check every one of the 64 possible assignments. The QUBO's cut ener
 
 **Q: Why λ = 2.0 for the balance penalty?**
 A: λ trades cut against balance. On c17 the best lopsided split sits only 1.0 above the optimum at λ = 1, but 2.0 above it at λ = 2. That makes a noisy solver less likely to drift to an unbalanced answer, while the cut terms still decide among balanced splits. We chose it on c17 only, so the λ sweep re-checks it on larger designs.
+
+---
+
+## Phase 3: QUBO → Hamiltonian → QAOA on Aer
+
+**Q: 4000 shots on only 64 possible states. Wouldn't random guessing also find the answer?**
+A: Yes, almost certainly, so finding cut 2 on c17 proves very little. We compare how often good answers appear instead. Over 5 seeds at p=1, 9.2% of shots were optimal and 62.4% were balanced, against 3.1% and 31.2% for uniform guessing. At p=2 it was 18.0% and 82.4%. That shows the tuned circuit is doing something, but it isn't quantum advantage: c17 is easy for classical solvers too, and this is a noise-free simulator.
+
+**Q: How do you know the Hamiltonian and the QAOA code are right?**
+A: We use IBM's `qiskit-addon-opt-mapper` for the conversion, but because it's at version 0.1.0, we test its output. The Hamiltonian's energy matches our QUBO formula on all 64 c17 states and on a random QUBO with linear terms, which catches sign errors c17 can't. A separate grid scan confirms the p=1 minimum energy of about 4.03. The optimizer doesn't always reach it: one start succeeds about 15% of the time, so we use 20 starts, and 1 of our 5 seeds still missed. The final answer is always re-scored classically with `true_cut`.

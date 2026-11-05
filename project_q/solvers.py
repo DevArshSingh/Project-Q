@@ -16,12 +16,18 @@ from itertools import combinations
 
 import networkx as nx
 import numpy as np
+from qiskit.circuit.library import qaoa_ansatz
+from qiskit.quantum_info import SparsePauliOp
+from qiskit_addon_opt_mapper import OptimizationProblem
+from qiskit_aer.primitives import EstimatorV2, SamplerV2
+from scipy.optimize import minimize
 
-from project_q.parse_yosys import DEFAULT_EPS, Hypergraph, balance_bound, is_balanced, true_cut
+from project_q.parse_yosys import DEFAULT_EPS, Hypergraph, balance_bound, is_balanced, side_weights, true_cut
 from project_q.qubo import QUBO, qubo_energies, qubo_energy
 
 BRUTE_FORCE_MAX_N = 20  # routine cap: 2^20 ≈ 1M assignments, well under a second
 BRUTE_FORCE_HARD_CAP = 24  # CLAUDE.md: never above 24 qubits / variables
+QAOA_MAX_QUBITS = 24  # CLAUDE.md: never above 24 qubits on the simulator
 
 
 @dataclass
@@ -308,3 +314,163 @@ def kernighan_lin(
     )
     bits = [0 if v in side_a else 1 for v in hg.nodes]
     return _result("kl", hg, bits, qubo, eps, t0, seed=seed, max_iter=max_iter)
+
+
+# --------------------------------------------------------------------------- QAOA (Aer simulator only)
+
+
+def qubo_to_ising(qubo: QUBO, tol: float = 1e-12) -> tuple[SparsePauliOp, float]:
+    """QUBO -> Hamiltonian H and a plain number `offset`, so E(x) = ⟨x|H|x⟩ + offset.
+
+    The conversion itself is done by qiskit-addon-opt-mapper (`to_ising`). What it does:
+    a qubit measured in state 0/1 has Z = +1/−1, so x = (1 − z)/2 links the QUBO's bits
+    to the Hamiltonian's Z operators. Substituting that into each QUBO term:
+        c·x_i      = c/2 − (c/2)·Z_i
+        c·x_i·x_j  = c/4 − (c/4)·Z_i − (c/4)·Z_j + (c/4)·Z_i·Z_j
+    Plain numbers don't affect which state is lowest, so they go in `offset` and stay
+    out of the circuit. Variable i becomes qubit i, i.e. `qubo.nodes[i]`.
+
+    For partitioning the Z_i terms all cancel: cut terms depend only on whether two
+    nodes differ, and the balance term equals (λ/4)(Σ w_i z_i)². Only Z_i·Z_j is left,
+    so swapping sides A and B never changes the energy. The library only removes
+    coefficients that are exactly 0, so `tol` also clears floating-point leftovers,
+    which would otherwise add useless gates to the circuit.
+
+    The library is at version 0.1.0, so tests/test_qaoa.py checks this result against
+    `qubo_energy` on every basis state instead of trusting it.
+    """
+    problem = OptimizationProblem("partition")
+    problem.binary_var_list(qubo.num_vars, name="x")  # same order as qubo.nodes
+    linear = {i: c for (i, j), c in qubo.terms.items() if i == j}
+    quadratic = {(i, j): c for (i, j), c in qubo.terms.items() if i != j}
+    problem.minimize(constant=qubo.constant, linear=linear, quadratic=quadratic)
+    operator, offset = problem.to_ising()
+
+    operator = operator.simplify(atol=tol)
+    if np.all(np.abs(operator.coeffs) <= tol):
+        raise ValueError("QUBO has no terms, so there is nothing to optimize")
+    return operator, float(offset)
+
+
+def _ansatz_values(ansatz, gammas, betas) -> list[float]:
+    """Angles in `ansatz.parameters` order, matched by name.
+
+    Qiskit sorts parameters alphabetically, so all β come before all γ. Binding by
+    position would silently swap the cost and mixer angles.
+    """
+    by_name = {f"γ[{k}]": float(g) for k, g in enumerate(gammas)}
+    by_name |= {f"β[{k}]": float(b) for k, b in enumerate(betas)}
+    return [by_name[p.name] for p in ansatz.parameters]
+
+
+def _bits_from_key(key: str) -> list[int]:
+    """Counts key -> bits in `hg.nodes` order. Qiskit prints qubit 0 as the rightmost character."""
+    return [int(c) for c in reversed(key)]
+
+
+def select_best_shot(counts: dict[str, int], hg: Hypergraph, eps: float = DEFAULT_EPS) -> tuple[list[int], bool]:
+    """Our answer from a set of measured shots: returns (bits, found_balanced).
+
+    QAOA is a sampler, and any shot can be checked classically, so we keep the balanced
+    shot with the lowest true cut, not the most frequent one. If no shot is balanced we
+    return the least lopsided one and report False, so the failure stays visible.
+    Ties go to the more frequent shot, then the key, so the choice is repeatable.
+    """
+    shots = [(key, _bits_from_key(key), n) for key, n in counts.items()]
+    balanced = [s for s in shots if is_balanced(hg, s[1], eps)]
+    if balanced:
+        best = min(balanced, key=lambda s: (true_cut(hg, s[1]), -s[2], s[0]))
+        return best[1], True
+    best = min(shots, key=lambda s: (max(side_weights(hg, s[1])), true_cut(hg, s[1]), -s[2], s[0]))
+    return best[1], False
+
+
+def qaoa(
+    hg: Hypergraph,
+    qubo: QUBO,
+    p: int = 1,
+    shots: int = 4000,
+    restarts: int = 20,
+    maxiter: int = 200,
+    eps: float = DEFAULT_EPS,
+    seed: int = 0,
+    best_known_cut: int | None = None,
+) -> SolverResult:
+    """QAOA on the Aer simulator (never hardware): tune the angles, then sample answers.
+
+    The circuit starts in an equal mix of all splits, then repeats p times: a cost layer
+    (angle γ) marks states by energy, and a mixer layer (angle β) moves probability
+    between states so that low-energy states become more likely. A classical optimizer
+    chooses γ and β.
+
+    Step 1: COBYLA lowers the Estimator's ⟨H⟩ from several seeded starts, because this
+    energy landscape has many local minima. COBYLA needs no gradients. Aer's Estimator
+    at default precision is exact, so there is no shot noise here. Why 20 starts: on c17
+    at p=1 one start reaches the true minimum only about 15% of the time (checked with a
+    grid scan), so 8 starts miss it about 27% of the time and 20 miss it about 4%.
+    Step 2: the Sampler measures `shots` shots at the best angles found.
+    Step 3: `select_best_shot` picks the answer, and `_result` re-scores it with true_cut.
+    """
+    t0 = time.perf_counter()
+    if p < 1:
+        raise ValueError(f"QAOA needs p ≥ 1, got {p}")
+    if qubo.nodes != hg.nodes:
+        raise ValueError("QUBO variable order does not match hypergraph node order")
+    if qubo.num_vars > QAOA_MAX_QUBITS:
+        raise ValueError(f"QAOA refuses {qubo.num_vars} qubits > {QAOA_MAX_QUBITS} (hard cap)")
+
+    operator, offset = qubo_to_ising(qubo)
+    ansatz = qaoa_ansatz(operator, reps=p)
+    estimator = EstimatorV2()
+    rng = np.random.default_rng(seed)
+
+    def energy(angles: np.ndarray) -> float:
+        values = _ansatz_values(ansatz, angles[:p], angles[p:])
+        return float(estimator.run([(ansatz, operator, values)]).result()[0].data.evs)
+
+    runs = []
+    for _ in range(restarts):
+        # Angles beyond these ranges mostly repeat the same circuits (β has period π/2 here).
+        start = np.concatenate([rng.uniform(0, np.pi, p), rng.uniform(0, np.pi / 2, p)])
+        runs.append(minimize(energy, start, method="COBYLA", options={"maxiter": maxiter, "rhobeg": 0.5}))
+    best = min(runs, key=lambda r: r.fun)
+    gammas, betas = best.x[:p], best.x[p:]
+
+    measured = ansatz.copy()
+    measured.measure_all()
+    values = _ansatz_values(measured, gammas, betas)
+    counts = SamplerV2(seed=seed).run([(measured, values)], shots=shots).result()[0].data.meas.get_counts()
+
+    bits, found_balanced = select_best_shot(counts, hg, eps)
+    balanced_shots = sum(n for key, n in counts.items() if is_balanced(hg, _bits_from_key(key), eps))
+    p_optimal = None
+    if best_known_cut is not None:
+        hits = sum(
+            n
+            for key, n in counts.items()
+            if is_balanced(hg, _bits_from_key(key), eps) and true_cut(hg, _bits_from_key(key)) == best_known_cut
+        )
+        p_optimal = hits / shots
+
+    return _result(
+        "qaoa",
+        hg,
+        bits,
+        qubo,
+        eps,
+        t0,
+        p=p,
+        shots=shots,
+        qubits=qubo.num_vars,
+        seed=seed,
+        backend="aer_simulator",
+        gammas=[float(g) for g in gammas],
+        betas=[float(b) for b in betas],
+        expected_energy=float(best.fun) + offset,  # on the QUBO's scale, comparable to E(x)
+        uniform_energy=offset,  # ⟨H⟩ of a uniform random guess, since each Z term averages 0
+        restart_energies=[float(r.fun) + offset for r in runs],
+        found_balanced=found_balanced,
+        feasible_rate=balanced_shots / shots,
+        p_optimal=p_optimal,
+        counts=counts,
+    )
