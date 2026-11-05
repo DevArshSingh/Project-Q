@@ -162,11 +162,20 @@ def test_missing_file_fails_clearly(tmp_path, capsys):
     assert "design not found" in capsys.readouterr().err
 
 
-@pytest.mark.parametrize(("solver", "limit"), [("qaoa", "24"), ("brute", "20")])
-def test_oversized_designs_are_refused_clearly(solver, limit, tmp_path, capsys):
-    design = BENCHMARKS / "netlists" / "c432.json"
-    assert cli.main(["partition", str(design), "--solver", solver, "--results-dir", str(tmp_path)]) == 2
-    assert limit in capsys.readouterr().err
+def _chain_netlist(n: int):
+    """A chain of n unit gates, as a hypergraph, for sizes between the committed benchmarks."""
+    from project_q.parse_yosys import Hypergraph
+
+    nodes = [f"g{i}" for i in range(n)]
+    nets = [frozenset(pair) for pair in zip(nodes, nodes[1:])]
+    return Hypergraph(nodes=nodes, nets=nets, net_names=[f"n{i}" for i in range(len(nets))])
+
+
+def test_brute_between_its_limit_and_multilevel_is_refused_clearly(tmp_path, capsys, monkeypatch):
+    # 21-24 nodes: too big for routine brute force, but small enough that nothing gets coarsened.
+    monkeypatch.setattr(cli, "load_design", lambda _: ("chain22", _chain_netlist(22)))
+    assert cli.main(["partition", "ignored.v", "--solver", "brute", "--results-dir", str(tmp_path)]) == 2
+    assert "20" in capsys.readouterr().err
     assert not records(tmp_path)
 
 
@@ -186,14 +195,18 @@ def test_benchmark_c17_prints_every_solver_and_writes_json(tmp_path, capsys):
     assert by_solver["qaoa"]["backend"] == "aer_simulator" and by_solver["kl"]["backend"] == "classical"
 
 
-def test_benchmark_c432_skips_what_cannot_run_and_says_so(tmp_path, capsys, monkeypatch):
-    # SA is left out to keep this test quick. It runs on c432 in the manual benchmark.
-    monkeypatch.setattr(cli, "SOLVERS", ["brute", "random", "kl", "kahypar", "qaoa"])
-    assert cli.main(["benchmark", str(BENCHMARKS / "netlists" / "c432.json"), "--results-dir", str(tmp_path)]) == 0
+def test_benchmark_c432_uses_multilevel_and_never_claims_a_proven_best(tmp_path, capsys):
+    design = str(BENCHMARKS / "netlists" / "c432.json")
+    assert cli.main(["benchmark", design, "--target", "6", "--results-dir", str(tmp_path), *FAST]) == 0
     out = capsys.readouterr().out
-    assert "brute        skipped" in out and "qaoa         skipped" in out
+    assert "skipped" not in out
     assert "best_of_this_run" in out and "isn't proven optimal" in out
-    assert {r["best_known_source"] for r in records(tmp_path)} == {"best_of_this_run"}
+    by_solver = {r["solver"]: r for r in records(tmp_path)}
+    assert set(by_solver) == {
+        "multilevel-brute", "multilevel-random", "multilevel-sa", "multilevel-qaoa", "kl", reported_name("kahypar"),
+    }  # fmt: skip
+    assert {r["best_known_source"] for r in by_solver.values()} == {"best_of_this_run"}
+    assert by_solver["multilevel-qaoa"]["qubits"] == 6
 
 
 # ----------------------------------------------------------------- c432 / c880

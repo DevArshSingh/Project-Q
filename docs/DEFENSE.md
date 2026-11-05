@@ -54,7 +54,7 @@ We make no claim of quantum advantage anywhere.
 **Where it falls short.**
 - **Approximate for big nets.** For 4–8-gate nets the pair rule over-scores even splits (a 2|2 split of a 4-gate net scores 4/3, not 1), so the lowest energy may not be the lowest cut. Nets over 8 gates are left out of the QUBO entirely. c17 has neither, so Gate 1 does not test this.
 - **Soft vs hard balance.** The penalty pushes toward exactly W/2, while the hard rule allows ⌈W/2⌉(1+ε). They agree on c17, but on weighted supernodes the penalty can push away from splits the hard rule accepts.
-- **λ = 2.0 was chosen on c17 only.** The right value depends on node weights and net count, so it must be re-checked on coarsened designs (λ sweep, Phase 6).
+- **λ = 2.0 was chosen on c17 only.** The right value depends on node weights and net count, so it fails on coarsened designs. Phase 6 adds a rule that computes λ from the circuit, which also gives 2.0 on c17.
 - **Brute force is exponential.** It is limited to 20 nodes routinely and 24 at most, so it can't check anything larger.
 - **Baseline limits.**
   - Simulated annealing returns the lowest-energy balanced state it visits, which is the lowest cut only if the QUBO is exact.
@@ -134,10 +134,10 @@ KaHyPar takes about 0.05 s or less per run on these designs, and classical solve
 **Where it falls short.**
 - **"Best known" on large designs isn't proven.** Brute force can't run on them, so the gap compares against the best cut found in the same run. The output says so, and the record marks it `best_of_this_run`.
 - **The new benchmarks aren't the original ISCAS files.** The source repository re-synthesized them with Cadence Genus, and Yosys and ABC then re-synthesize them again. Our cuts can't be compared directly with published results, and GitHub reported no license for that repository.
-- **One seed and default settings.** The table is a first look, not a fair comparison: simulated annealing and Kernighan–Lin weren't tuned, and random is one sample by design. KaHyPar's c880 cut varied from 21 to 24 across 3 seeds when we tried it. Phase 6 produces the real results table.
+- **One seed and default settings.** The table is a first look, not a fair comparison: simulated annealing and Kernighan–Lin weren't tuned, and random is one sample by design. KaHyPar's c880 cut varied from 21 to 24 across 3 seeds when we tried it. `results/summary.csv` from Phase 6 is the real results table.
 - **The QUBO is approximate on these designs.** Simulated annealing searches the QUBO, which only approximates nets with more than 3 gates and leaves out nets above 8, so this may hurt its results. We haven't measured how much.
 - **KaHyPar is optional.** It's in `requirements-optional.txt`, so a failed install can't block the main install. Without it, `--solver kahypar` runs Kernighan–Lin and labels the result `kl-fallback`, so results differ between installs. The KaHyPar numbers above need it installed. KaHyPar is GPLv3+, and we copied its config file into the repo, so check that before choosing a license for this project.
-- **The CLI handles one job.** It does two-way splits only, and QAOA stops at 24 qubits until coarsening arrives in Phase 5.
+- **The CLI handles one job.** It does two-way splits only. As of Phase 6, designs above 24 nodes go through multilevel.
 
 ---
 
@@ -185,15 +185,105 @@ KaHyPar takes about 0.05 s or less per run on these designs, and classical solve
 
 **Where it falls short.**
 - **"Matches brute force" proves little.** Random guessing matched in 14 of 15 runs, against QAOA's 15 of 15. With 4000 shots on 4096 states, guessing finds an optimum 86–100% of the time.
-- **FM may be doing most of the work.** On full c432, QAOA+FM is no better than the classical versions and takes hundreds of times longer. Coarse cuts of 12 to 32 became final cuts of 11 to 14, and the best coarse cut did not give the best final cut. Phase 6's ablation measures this properly.
+- **FM may be doing most of the work.** On full c432, QAOA+FM is no better than the classical versions and takes hundreds of times longer. Coarse cuts of 12 to 32 became final cuts of 11 to 14, and the best coarse cut did not give the best final cut. Phase 6's ablation measured this, and FM does most of the work.
 - **The QUBO is approximate here.** Coarse nets reach about 7 supernodes, so the QUBO uses the pair approximation on these instances.
 - **The statistics are simple.** The test pools shots across seeds, and it isn't corrected for running many settings.
 - **Small test size.** We ran 3 instances of one circuit at 12 qubits. 20 qubits hasn't been timed. The 1.5× weight cap is our own choice, not tuned or taken from the literature.
 - **Noise-free simulator only.** Hardware results could be much worse.
-- **The notebook has no Phase 5 section yet.** It's updated separately.
+- **The notebook has no Phase 5 or Phase 6 section yet.** It's updated separately.
 
 ### Known limitations
 
-1. **λ = 2.0 doesn't suit weighted supernodes.** On 2 of the 3 coarsened c432 instances, its lowest-energy state is not the best balanced split: cut 19 vs the optimum of 12 on seed 1, and cut 23 vs 16 on seed 2. The tuned values (0.801 on seed 0, 0.128 on seeds 1 and 2) came from a brute-force scan, which already knows the answer and can't run on designs too large to brute force. So tuning isn't a recipe that scales, and the multilevel table above still uses 2.0. Phase 6 must define a λ rule that doesn't rely on brute force.
+1. **λ = 2.0 doesn't suit weighted supernodes. Partly fixed in Phase 6.** On 2 of the 3 coarsened c432 instances, its lowest-energy state is not the best balanced split: cut 19 vs the optimum of 12 on seed 1, and cut 23 vs 16 on seed 2. The tuned values from Phase 5 came from a brute-force scan, which can't run on designs too large to brute force. Phase 6 adds `suggest_lambda`, which needs no brute force. It improves on 2.0 but makes the lowest-energy state optimal on only 11 of 23 held-out instances, and it doesn't change what QAOA samples on the instance we swept. See Phase 6.
 2. **FM can get stuck when balance is tight.** FM moves one node at a time. On c17 every single move from a 3/3 split gives 2/4, which breaks the rule, so no move is legal. It works on c432 because the rule allows sides from 91 to 96. FM also can't guarantee balance when supernodes are too heavy to fit, and the result would report that.
-3. **The CLI doesn't use multilevel yet.** `partition` and `benchmark` still can't run QAOA on c432. The CLI's skip message ("coarsening comes in Phase 5") and the Phase 4 note above ("until coarsening arrives in Phase 5") are out of date until the CLI is connected.
+3. **The CLI doesn't use multilevel yet. Fixed in Phase 6.** `partition` and `benchmark` now send designs above 24 nodes through multilevel.
+
+---
+
+## Phase 6: Benchmarks, ablation, λ rule and plots
+
+**In plain words.**
+- We ran every solver on c17, c432 and c880 and saved each run, with its seeds, in `results/summary.csv`.
+- An ablation takes a pipeline and swaps out one part to see how much that part matters. We kept coarsening and FM (the single-node polishing step) the same and swapped the solver in the middle.
+- FM does most of the work. It turns even a random start into a good final cut.
+- QAOA+FM did not show a clear gain over random+FM, and classical tools were faster and at least as good.
+- λ is how strongly the QUBO punishes uneven splits. We added a formula that sets it from the circuit alone.
+- The formula gives better QUBOs than a fixed λ = 2.0, but its lowest-energy state is still the true best split on only 11 of 23 new test cases.
+- This all ran on the noise-free Aer simulator. No IBM hardware was used.
+
+**How to reproduce it.** `python scripts/phase6.py estimate`, then `python scripts/phase6.py all --confirmed`. The full run took about 42 minutes, and all 210 runs in `summary.csv` finished without errors. Seeds are in the CSV, and each row keeps its split in `assignment`, so anyone can recheck its cut. Runtimes will differ between runs.
+
+**Results table (mean final cut, then lowest to highest).** QAOA is p=1 with 20 restarts and 4000 shots. c432 and c880 have no proven optimum.
+
+| Solver | c17 (seeds 0–4) | c432 | c880 | Time per run, c432 / c880 |
+|---|---|---|---|---|
+| Random, flat (one split) | 3.6 (3–4) | 113.2 (102–124) | 299.4 (282–313) | under 0.01 s |
+| Simulated annealing, flat | 2 | 13.8 (13–15) | 25.7 (23–29) | 0.51 s / 1.51 s |
+| Kernighan–Lin, flat | 2 | 19.1 (18–21) | 41.4 (27–57) | about 0.01 s or less |
+| KaHyPar, flat | 2 | 11 (11–11) | 21.6 (21–24) | 0.01 s / 0.03 s |
+| Brute force | 2 (proven) | not possible | not possible | |
+| QAOA, flat | 2 | not possible | not possible | 3.3 s on c17 |
+| Random + FM, 12 supernodes | | 13.5 (11–16) | 25.0 (21–30) | 0.01 s / 0.08 s |
+| Simulated annealing + FM, 12 | | 11.5 (11–12) | 26.2 (21–32) | 0.04 s / 0.10 s |
+| Brute force + FM, 12 | | 11.7 (11–14) | 26.1 (21–31) | 0.01 s / 0.08 s |
+| QAOA + FM, 12 | | 11.5 (11–12) | 26.2 (21–32) | 17.9 s / 23.6 s |
+| Random + FM, 20 supernodes | | 12.3 (11–14) | 28.0 (26–30) | 0.01 s / 0.06 s |
+| Simulated annealing + FM, 20 | | 11.0 (11–11) | 28.7 (24–33) | 0.05 s / 0.12 s |
+| Brute force + FM, 20 | | 11.3 (11–12) | 26.3 (24–29) | 0.63 s / 0.81 s |
+| QAOA + FM, 20 | | 12.7 (11–16) | 28.7 (27–31) | 252 s / 171 s |
+
+The 12-supernode rows use 10 seeds, the 20-supernode rows use 3, and flat c432 and c880 rows use 10.
+
+**Ablation verdict (`plots/ablation.png`, `results/ablation_verdict.txt`).** We fixed the wording rule before running: "beat" needs a lower mean and a sign test below p = 0.05.
+
+| Design, size | Verdict | Random+FM vs QAOA+FM, mean | QAOA lower / tied / random lower | p |
+|---|---|---|---|---|
+| c432, 12, 10 seeds | **Random+FM matches QAOA+FM** | 13.5 vs 11.5 | 6 / 2 / 2 | 0.289 |
+| c880, 12, 10 seeds | **Random+FM matches QAOA+FM** | 25.0 vs 26.2 | 1 / 4 / 5 | 0.219 |
+| c432, 20, 3 seeds | Descriptive only | 12.3 vs 12.7 | 2 / 0 / 1 | 1.000 |
+| c880, 20, 3 seeds | Descriptive only | 28.0 vs 28.7 | 1 / 0 / 2 | 1.000 |
+
+**What the ablation shows.**
+- **FM does most of the work.** Random's coarse cuts average 28.6 on c432 and 61 on c880 at 12 supernodes. FM brings them to 13.5 and 25.0.
+- **A better coarse cut doesn't reliably mean a better final cut.** On c880 at 12 supernodes, brute force has the best possible coarse cuts (mean 43.4), yet random's far worse ones (mean 61) end slightly lower, 25.0 vs 26.1.
+- **QAOA's coarse answers depend on size.** At 12 qubits, its best shot equals brute force's coarse cut in 20 of 20 runs. As Phase 5 showed, 4000 shots nearly cover 4096 states, so that says little. At 20 qubits, where 4000 shots can't cover about a million states, it matched in 0 of 6 runs and none of its shots were optimal (coarse cut 19 vs 12–13 on c432, 42–45 vs 37–41 on c880).
+- **Classical tools are ahead.** On c432 at 12 supernodes, simulated annealing+FM has the same final cuts as QAOA+FM on all 10 seeds, in 0.04 s instead of 17.9 s. KaHyPar on its own is as good as or better than every multilevel row's mean on both designs, in 0.03 s or less.
+
+**The λ rule (`suggest_lambda` in `project_q/qubo.py`).** λ = d̄ / (δ_out² − δ_min²), where d̄ is the average number of nets per node, δ_min is the smallest possible imbalance, and δ_out is the first imbalance the balance rule rejects. So going from the most even split to the first illegal one costs about as much as the wires on a typical node. It uses only the circuit and ε. On c17 it gives exactly 2.0, so Gate 1 and the Phase 8 angles don't change. `multilevel` and the CLI use it by default on the coarse circuit, and `--lam` overrides it.
+
+| Lowest-energy state is the true best split | Rule | Fixed λ = 2.0 |
+|---|---|---|
+| Used to choose the formula (c17, c432 seeds 0–2), so not evidence | 4/4 | 2/4 |
+| **Held out: all** | **11/23** | **8/23** |
+| Held out: c432, 12 supernodes | 5/7 | 4/7 |
+| Held out: c880, 12 supernodes | 3/10 | 2/10 |
+| Held out: c432, 20 supernodes | 2/3 | 1/3 |
+| Held out: c880, 20 supernodes | 1/3 | 1/3 |
+
+On the 23 held-out instances (`results/lambda_rule.csv`), the rule's lowest-energy state was never worse than 2.0's: its cut was lower on 7 and equal on 16. It averaged 1.1 above the optimum, against 2.1 for 2.0. Every lowest-energy state was balanced, for both. We did not change the formula after seeing these results.
+
+**The λ sweep (`plots/lambda_sweep.png`).** QAOA p=1, 5 seeds at each λ.
+- **c17:** at λ = 0.1 the lowest-energy state puts everything on one side (cut 0, unbalanced). From λ = 0.3 up it is the true optimum, with an energy gap of 0.3 at 0.3 and 1.0 from λ = 1 up. Balanced shots rise from 17.9% at 0.1 to 68.6% at 1, then stay between 58.5% and 65.6%.
+- **Coarse c432 (seed 1, chosen because 2.0 is known to fail there):** the lowest-energy state is optimal (cut 12) at λ = 0.1, 0.3 and 1, and wrong (cut 19) at 2, 3 and 10. The rule's 0.75 lands in the working range.
+- **But QAOA's shots barely change on that instance.** Across all six λ values, balanced shots stay at 21.9–22.4%, optimal shots at 0.12–0.15%, and the mean balanced-shot cut at 27.3–27.5. The likely reason is that with supernode weights, the balance term is far larger than the cut terms even at λ = 0.1, and normalizing removes the overall scale. We haven't tested that separately.
+
+**Why it works.**
+- **Scoring.** Every cut in the CSV comes through `make_record`, which recomputes it with `true_cut`. A test recomputes it again from the saved split. The partition picture raises an error if its cut count disagrees with `true_cut`.
+- **Fair pairing.** The same seed gives every coarse solver the same coarse circuit, and a test checks this.
+- **c17 rates differ slightly from Phase 3.** Phase 6 reports 63.2% balanced and 9.8% optimal shots, against 62.4% and 9.2%, because it uses the Yosys netlist and Phase 3 the hand-written c17. Their qubit order differs, so the same seed draws different shots. On seed 0 both reached the same ⟨E⟩ of 4.026.
+- **Repeatability.** A test confirms that re-running gives the same row apart from runtime, and that classical rows don't change with Python's hash order.
+- **Verdict.** Tests check the wording on hand-made data, including cases where QAOA is ahead but not significantly.
+- **The CLI.** Tests check that above 24 nodes `brute`, `qaoa`, `random` and `sa` go through multilevel, and that `multilevel-brute` is never reported as a proven best.
+- **QUBO check.** The rule returns 2.0 on c17, and Gate 1 still holds there (cut 2, gap 1.0).
+
+**Where it falls short.**
+- **The rule isn't solved.** 11 of 23 is better than 8 of 23 but is still under half, and it was worst on c880 at 12 supernodes (3/10). The pair approximation for large nets may be part of the reason, but we haven't measured that.
+- **We chose the formula after seeing 4 instances.** Only the held-out group counts as evidence. An earlier candidate (degree ÷ weight²) failed on one of those 4 and was dropped.
+- **A better QUBO hasn't meant a better final cut.** On c432 seeds 0–2, simulated annealing+FM got 12, 12, 12 with the rule, against 12, 11, 11 with λ = 2.0 in Phase 5. QAOA+FM got 12, 12, 12 both times. Flat simulated annealing did improve at seed 0 compared with Phase 4's λ = 2.0: 65 to 25 on c880, and 15 to 14 on c432.
+- **"Matches" doesn't prove they're equal.** It means this test found no clear difference. On c432 at 12 supernodes QAOA's mean is 2 lower with 6 wins to 2, which is suggestive, but 10 seeds couldn't confirm it. The same simple comparison goes the other way on c880.
+- **The comparison isn't even-handed.** Random+FM uses one random split, while QAOA gets its best of 4000 checked shots, which favours QAOA. We applied no correction for testing several designs and sizes.
+- **20 supernodes has only 3 seeds.** A sign test can't reach p < 0.05 there, so those rows only describe what happened. We also didn't run 4000 uniform random shots at 20 qubits, so we can't say how QAOA's shots compare with guessing at that size.
+- **`p_optimal` means the coarse level** on multilevel rows, not the full circuit.
+- **Best known cuts on c432 and c880 are only the best in this file**, labelled `best_of_this_run`.
+- **Limits that remain.** p=1 only, simulator only, two circuits, and netlists re-synthesized as described under Phase 4. FM on c17 is still stuck (Known limitation 2), so c17 stays flat. Brute force on 21–24 node designs is still refused.
+- **The notebook has no Phase 6 section yet.** It's updated separately.

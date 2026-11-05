@@ -22,7 +22,7 @@ import time
 from dataclasses import dataclass, field
 
 from project_q.parse_yosys import DEFAULT_EPS, Hypergraph, balance_bound, is_balanced, true_cut
-from project_q.qubo import DEFAULT_LAMBDA, build_partition_qubo
+from project_q.qubo import build_partition_qubo, suggest_lambda
 from project_q.solvers import SolverResult, _result, brute_force, qaoa, random_balanced, simulated_annealing
 
 DEFAULT_TARGET = 20  # BUILD_PLAN: coarsen until at most this many supernodes remain
@@ -319,7 +319,7 @@ def multilevel(
     hg: Hypergraph,
     coarse_solver: str = "qaoa",
     target: int = DEFAULT_TARGET,
-    lam: float = DEFAULT_LAMBDA,
+    lam: float | None = None,
     eps: float = DEFAULT_EPS,
     seed: int = 0,
     p: int = 1,
@@ -333,12 +333,16 @@ def multilevel(
     The record keeps the cut before and after FM at each level, because a good final cut may
     be FM's work and not the coarse solver's. That is what the Phase 6 ablation measures.
     Only the coarse solver is ever quantum, and only on the Aer simulator.
+    `lam=None` computes λ with `suggest_lambda` on the coarse circuit, whose heavy supernodes
+    are what the penalty has to suit. Random and brute force never read λ: they judge by true cut.
     """
     if coarse_solver not in COARSE_SOLVERS:
         raise ValueError(f"unknown coarse solver {coarse_solver!r}; choose from {COARSE_SOLVERS}")
     t0 = time.perf_counter()
     hierarchy = coarsen(hg, target=target, seed=seed)
     coarse = hierarchy.coarsest
+    lam_source = "explicit" if lam is not None else "rule"
+    lam = suggest_lambda(coarse, eps) if lam is None else lam
     solved = _solve_coarse(coarse, coarse_solver, lam, eps, seed, p, shots, restarts, normalize)
 
     bits = solved.assignment
@@ -372,6 +376,9 @@ def multilevel(
         eps,
         t0,
         seed=seed,
+        lam=lam,
+        lam_source=lam_source,
+        normalize=normalize,
         coarse_solver=coarse_solver,
         target=target,
         coarse_nodes=coarse.num_nodes,

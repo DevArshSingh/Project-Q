@@ -310,7 +310,7 @@ def test_multilevel_brute_uses_the_proven_coarse_optimum(c432):
 
 def test_multilevel_with_qaoa_on_the_simulator(c432):
     # Few restarts and shots to keep it quick: this checks the wiring, not QAOA's quality.
-    result = multilevel(c432, "qaoa", target=8, restarts=2, shots=300, seed=0)
+    result = multilevel(c432, "qaoa", target=8, restarts=2, shots=300, seed=0, lam=2.0)
     assert result.solver == "multilevel-qaoa"
     assert result.balanced and result.cut == true_cut(c432, result.assignment)
     assert result.info["qubits"] == 8 and result.info["backend"] == "aer_simulator"

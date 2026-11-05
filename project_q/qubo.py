@@ -24,15 +24,16 @@ Cut terms. For a pair {i, j}, (x_i + x_j − 2 x_i x_j) is 1 when they differ an
 
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from itertools import combinations
 
 import numpy as np
 
-from project_q.parse_yosys import Hypergraph
+from project_q.parse_yosys import DEFAULT_EPS, Hypergraph, balance_bound
 
-DEFAULT_LAMBDA = 2.0
+DEFAULT_LAMBDA = 2.0  # the value Gate 1 and the Phase 8 angles use; suggest_lambda gives 2.0 on c17
 MAX_QUBO_NET_SIZE = 8
 
 
@@ -67,6 +68,36 @@ class QUBO:
         for (i, j), c in self.terms.items():
             q[i, j] += c
         return q
+
+
+def suggest_lambda(hg: Hypergraph, eps: float = DEFAULT_EPS) -> float:
+    """A balance weight λ computed from the circuit alone, with no brute force.
+
+    Rule: λ = d̄ / (δ_out² − δ_min²)
+      d̄      average number of nets per node, counting only nets the QUBO can see (≤ 8 nodes)
+      δ_min  smallest possible imbalance |w(A) − W/2|: 0 if W is even, 0.5 if W is odd
+      δ_out  the first imbalance the hard balance rule rejects
+
+    Why: the penalty is λδ², so going from the most even split to the first illegal one
+    costs λ(δ_out² − δ_min²). The rule sets that cost equal to the wires on a typical node.
+    Much lower and illegal splits win, because they save more cut than the penalty costs.
+    Much higher and the penalty swamps the cut among legal splits: a fixed λ = 2.0 charges
+    a c432 supernode split at δ = 2.5 about 12 more than one at δ = 0.5, although the hard
+    rule accepts both, which is how it picked cut 19 over the optimum of 12.
+
+    This is a rule of thumb, not a guarantee, so the true cut is still always recomputed.
+    See results/lambda_rule.csv for how it did on instances not used to choose it.
+    On c17: d̄ = 2, δ_min = 0, δ_out = 1, so λ = 2.0, the value Gate 1 already uses.
+    """
+    total = hg.total_weight
+    # Side weights are whole numbers, so round the limit down to the heaviest legal side.
+    allowed = math.floor(balance_bound(hg, eps) + 1e-9) - total / 2
+    delta_out = allowed + 1
+    delta_min = 0.5 if total % 2 else 0.0
+    visible_pins = sum(len(net) for net in hg.nets if len(net) <= MAX_QUBO_NET_SIZE)
+    # max(..., 1): with no visible nets there is nothing to trade off, but λ must stay positive.
+    mean_nets_per_node = max(visible_pins / hg.num_nodes, 1.0)
+    return mean_nets_per_node / (delta_out**2 - delta_min**2)
 
 
 def build_partition_qubo(hg: Hypergraph, lam: float = DEFAULT_LAMBDA) -> QUBO:
