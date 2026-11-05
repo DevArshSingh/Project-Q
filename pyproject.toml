@@ -18,5 +18,8 @@ project-q = "project_q.cli:main"
 [tool.setuptools]
 packages = ["project_q"]
 
+[tool.setuptools.package-data]
+project_q = ["kahypar_cut.ini"]  # KaHyPar needs this file, and its wheel does not include it
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

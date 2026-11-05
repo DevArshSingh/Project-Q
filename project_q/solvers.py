@@ -13,6 +13,7 @@ import random
 import time
 from dataclasses import dataclass, field
 from itertools import combinations
+from pathlib import Path
 
 import networkx as nx
 import numpy as np
@@ -28,6 +29,8 @@ from project_q.qubo import QUBO, qubo_energies, qubo_energy
 BRUTE_FORCE_MAX_N = 20  # routine cap: 2^20 ≈ 1M assignments, well under a second
 BRUTE_FORCE_HARD_CAP = 24  # CLAUDE.md: never above 24 qubits / variables
 QAOA_MAX_QUBITS = 24  # CLAUDE.md: never above 24 qubits on the simulator
+# KaHyPar's own "cut" preset, copied unchanged from its v1.3.7 release (see benchmarks/SOURCES.md).
+KAHYPAR_CONFIG = Path(__file__).with_name("kahypar_cut.ini")
 
 
 @dataclass
@@ -314,6 +317,48 @@ def kernighan_lin(
     )
     bits = [0 if v in side_a else 1 for v in hg.nodes]
     return _result("kl", hg, bits, qubo, eps, t0, seed=seed, max_iter=max_iter)
+
+
+# --------------------------------------------------------------------------- KaHyPar
+
+
+def kahypar_solver(
+    hg: Hypergraph, qubo: QUBO | None = None, eps: float = DEFAULT_EPS, seed: int = 0
+) -> SolverResult:
+    """KaHyPar, an industry-grade hypergraph partitioner: the strongest classical baseline here.
+
+    Unlike Kernighan-Lin it works on real nets instead of pairs, and it respects node
+    weights. It is optional (SPEC): if it isn't installed we run Kernighan-Lin instead
+    and label the result `kl-fallback`, so a weaker solver can't pass as KaHyPar.
+    """
+    t0 = time.perf_counter()
+    try:
+        import kahypar
+    except ImportError:
+        fallback = kernighan_lin(hg, qubo, eps, seed=seed)
+        fallback.solver = "kl-fallback"
+        fallback.info["requested"] = "kahypar"
+        return fallback
+
+    index = {node: i for i, node in enumerate(hg.nodes)}
+    # KaHyPar's format: all nets' node indices in one list, plus where each net starts.
+    net_starts, pins = [0], []
+    for net in hg.nets:
+        pins.extend(sorted(index[v] for v in net))
+        net_starts.append(len(pins))
+    graph = kahypar.Hypergraph(
+        hg.num_nodes, len(hg.nets), net_starts, pins, 2, [], [hg.weights[v] for v in hg.nodes]
+    )
+    context = kahypar.Context()
+    context.loadINIconfiguration(str(KAHYPAR_CONFIG))
+    context.setK(2)
+    context.setEpsilon(eps)
+    context.setSeed(seed)
+    context.suppressOutput(True)
+    kahypar.partition(graph, context)
+    # Its answer is re-scored by true_cut and is_balanced like every other solver's.
+    bits = [graph.blockID(i) for i in range(hg.num_nodes)]
+    return _result("kahypar", hg, bits, qubo, eps, t0, seed=seed)
 
 
 # --------------------------------------------------------------------------- QAOA (Aer simulator only)

@@ -99,3 +99,42 @@ We make no claim of quantum advantage anywhere.
 - **Only 6 qubits so far.** Larger designs are untested, so Gate 2 stays open until the ~12-node check in Phase 5. The balance penalty couples every pair of qubits (15 terms on c17), so the circuit grows quickly with size and could be hard to run on real hardware.
 - **Simulator only.** These results have no noise, so hardware results may be much worse.
 - **The mirror split is the same answer.** The Hamiltonian cannot tell a split from its mirror image, so "optimal shots" counts both.
+
+---
+
+## Phase 4: Scorecard, CLI and larger benchmarks
+
+**In plain words.**
+- There is now one command to run: `partition` uses one solver, and `benchmark` runs them all and prints a table.
+- Each run saves one JSON file, called a record: the cut, how far it is from the best known cut (the gap), whether it's balanced, and the runtime.
+- A solver can't mark its own work. The record recomputes the cut from the final split, using the same `true_cut` for every solver.
+- We added two larger circuits, c432 (187 gates) and c880 (480 gates). QAOA can't run on them yet because they need far more than our 24-qubit limit.
+- We also added KaHyPar, an industry-grade classical partitioner, as the strongest baseline.
+
+**Results from `benchmark` (seed 0).**
+
+| Solver | c17 cut | c432 cut | c880 cut |
+|---|---|---|---|
+| Random (one split) | 3 | 123 | 282 |
+| Simulated annealing | 2 | 15 | 65 |
+| Kernighan–Lin | 2 | 21 | 42 |
+| KaHyPar | 2 | 11 | 21 |
+| Brute force | 2 | skipped | skipped |
+| QAOA, p=1 | 2 | skipped | skipped |
+
+KaHyPar takes about 0.05 s or less per run on these designs, and classical solvers win clearly on the larger ones. The only proven optimum here is c17's.
+
+**Why it works.**
+- Tests check that a record recomputes the cut even when a solver reports a wrong one, and that every number in a saved c17 record follows from its assignment.
+- `gap_percent` is left empty for an unbalanced split, because breaking the balance rule could otherwise look like beating the best answer.
+- `balance_ratio` agrees with `is_balanced` on all 64 c17 states.
+- KaHyPar's own cut matched `true_cut` when we tried it, and its answers are re-scored like everyone else's.
+- The committed c432 and c880 netlists match a live Yosys run, and tests check their node and net counts.
+
+**Where it falls short.**
+- **"Best known" on large designs isn't proven.** Brute force can't run on them, so the gap compares against the best cut found in the same run. The output says so, and the record marks it `best_of_this_run`.
+- **The new benchmarks aren't the original ISCAS files.** The source repository re-synthesized them with Cadence Genus, and Yosys and ABC then re-synthesize them again. Our cuts can't be compared directly with published results, and GitHub reported no license for that repository.
+- **One seed and default settings.** The table is a first look, not a fair comparison: simulated annealing and Kernighan–Lin weren't tuned, and random is one sample by design. KaHyPar's c880 cut varied from 21 to 24 across 3 seeds when we tried it. Phase 6 produces the real results table.
+- **The QUBO is approximate on these designs.** Simulated annealing searches the QUBO, which only approximates nets with more than 3 gates and leaves out nets above 8, so this may hurt its results. We haven't measured how much.
+- **KaHyPar is optional.** Without it, `--solver kahypar` runs Kernighan–Lin and labels the result `kl-fallback`, so results can differ between installs. KaHyPar is GPLv3+, and we copied its config file into the repo, so check that before choosing a license for this project.
+- **The CLI handles one job.** It does two-way splits only, and QAOA stops at 24 qubits until coarsening arrives in Phase 5.

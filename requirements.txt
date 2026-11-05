@@ -16,5 +16,6 @@ nbformat
 nbconvert
 ipykernel
 
-# Optional: KaHyPar baseline. If it fails to install, the KL baseline is used instead (see SPEC.md).
+# Optional: KaHyPar baseline (tested with 1.3.7). Without it, `--solver kahypar` runs KL and labels the
+# result `kl-fallback` (see SPEC.md). To install: uv pip install kahypar
 # kahypar
