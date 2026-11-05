@@ -16,7 +16,7 @@ from project_q.parse_yosys import Hypergraph, side_weights, true_cut
 from project_q.solvers import SolverResult
 
 # Only these solvers' search depends on λ. The others ignore the QUBO, so a λ on their record would mislead.
-USES_LAMBDA = {"sa", "qaoa"}
+USES_LAMBDA = {"sa", "qaoa", "multilevel-sa", "multilevel-qaoa"}
 
 
 def balance_ratio(hg: Hypergraph, assignment) -> float:

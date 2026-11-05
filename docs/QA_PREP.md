@@ -52,3 +52,13 @@ A: Solvers don't report their own score. `make_record` recomputes the cut from e
 **Q: KaHyPar gets cut 11 on c432 in about 0.03 s, and QAOA can't even run on it. Why use QAOA at all?**
 A: For partitioning today, you should use KaHyPar, and our scorecard shows that plainly. Our contribution is the bridge from Verilog to a quantum-ready problem, plus an honest way to compare solvers on it. That lets a hardware engineer measure whether quantum solvers ever catch up. We don't claim quantum advantage. Note that 11 is the best cut found in that run, not a proven optimum.
 
+---
+
+## Phase 5: Coarsening, FM refinement and multilevel
+
+**Q: QAOA matched brute force on 12 qubits. Doesn't that show it works?**
+A: Not by itself. With 4000 shots on only 4096 states, random guessing also matched in 14 of 15 runs, against QAOA's 15 of 15. So we compared shot rates as well. QAOA gave more than twice as many balanced shots as guessing, but among balanced shots it hit the optimum about as often as guessing did (for example 0.55% vs 0.55%). Our test, fixed before running, passed on 2 of 3 instances at p=1. So QAOA learned to balance, and we have no evidence yet that it finds better cuts. Gate 2 passes as the SPEC wrote it, and we report that limit openly. This is not quantum advantage.
+
+**Q: If FM refines everything anyway, what is QAOA contributing on c432?**
+A: Right now, nothing measurable. Random+FM got cuts of 11, 14 and 14, simulated annealing+FM 12, 11 and 11, and QAOA+FM 12, 12 and 12, at hundreds of times the runtime. KaHyPar got 11 in about 0.02 s. Most of the improvement comes from FM: coarse cuts of 12 to 32 became final cuts of 11 to 14. These are 3 seeds on one circuit, so Phase 6 runs a proper ablation, and we'll state plainly if random+FM matches QAOA+FM. Merging itself can't distort the score, because a coarse split costs exactly what its full-size split costs, and tests check this.
+
