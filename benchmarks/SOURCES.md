@@ -25,4 +25,4 @@ https://raw.githubusercontent.com/kahypar/kahypar/v1.3.7/config/cut_kKaHyPar_sea
 
 SHA-256: `64ebd58a4f98b95bf87ae3de5341b2be00b09e122a0526ef65a799e39bb63dd8`
 
-KaHyPar is licensed under GPLv3 or later. It's an optional dependency, and its wheel doesn't include this file.
+KaHyPar is licensed under GPLv3 or later. `requirements.txt` installs it, and its wheel doesn't include this file.
