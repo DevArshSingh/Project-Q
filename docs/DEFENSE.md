@@ -137,25 +137,63 @@ KaHyPar takes about 0.05 s or less per run on these designs, and classical solve
 - **One seed and default settings.** The table is a first look, not a fair comparison: simulated annealing and Kernighan–Lin weren't tuned, and random is one sample by design. KaHyPar's c880 cut varied from 21 to 24 across 3 seeds when we tried it. Phase 6 produces the real results table.
 - **The QUBO is approximate on these designs.** Simulated annealing searches the QUBO, which only approximates nets with more than 3 gates and leaves out nets above 8, so this may hurt its results. We haven't measured how much.
 - **KaHyPar is optional.** It's in `requirements-optional.txt`, so a failed install can't block the main install. Without it, `--solver kahypar` runs Kernighan–Lin and labels the result `kl-fallback`, so results differ between installs. The KaHyPar numbers above need it installed. KaHyPar is GPLv3+, and we copied its config file into the repo, so check that before choosing a license for this project.
-- **The CLI handles one job.** It does two-way splits only, and plain QAOA stops at 24 qubits; use `multilevel-*` for larger designs (Phase 5).
+- **The CLI handles one job.** It does two-way splits only, and QAOA stops at 24 qubits until coarsening arrives in Phase 5.
 
 ---
 
-## Phase 5: Coarsening + FM refinement → Gate 2 (part 2)
+## Phase 5: Coarsening, FM refinement and the multilevel pipeline → Gate 2, part 2
 
 **In plain words.**
-- Big circuits are shrunk by merging tightly connected gates into supernodes (heavy-edge matching) until ≤ a target count (default 20).
-- A small-core solver (QAOA / SA / random / brute) partitions the coarse graph.
-- Uncoarsening projects that split back; at each level FM tries flipping one node at a time to cut `true_cut` without breaking balance.
-- CLI: `partition design.v --solver multilevel-qaoa --target 12`.
+- c432 has 187 gates, far more than the qubits we can simulate, so we shrink it first.
+- Coarsening repeatedly merges pairs of gates that share the most wires into heavier "supernodes", until 12 or 20 remain.
+- A solver (QAOA, annealing, random or brute force) splits that small version.
+- We then undo the merges one level at a time. After each level, FM (Fiduccia–Mattheyses) moves single nodes across if that lowers the cut, while keeping the split balanced.
+- FM will accept a temporary loss to get out of a dead end, then rolls back to the best point it saw.
+- Merging can't change the cost of a split, so a coarse cut is a real cut of the original circuit.
+- This all runs on the Aer simulator. No IBM hardware was used.
+
+**Gate 2 results (c432 coarsened to 12 nodes, 3 coarsening seeds, 5 QAOA seeds each, 4000 shots, 20 restarts).** Run `python scripts/gate2_c432.py` to reproduce them (about 25 minutes). The settings are the best-tuned λ, a normalized Hamiltonian and p=1. "Control" sends 4000 uniform random shots through the same selection rule.
+
+| Instance | Best cut | QAOA matched | Control matched | Optimal shots: QAOA vs guessing | Balanced shots: QAOA vs guessing | Optimal share of balanced shots: QAOA vs guessing |
+|---|---|---|---|---|---|---|
+| Seed 0 | 21 | 5/5 | 5/5 | 0.350% vs 0.146% | 14.8% vs 6.9% | 2.36% vs 2.13% |
+| Seed 1 | 12 | 5/5 | 4/5 | 0.120% vs 0.049% | 21.8% vs 8.9% | 0.55% vs 0.55% |
+| Seed 2 | 16 | 5/5 | 5/5 | 0.090% vs 0.049% | 16.6% vs 6.9% | 0.54% vs 0.71% |
+
+**Verdict.**
+- **Tier 1 (the SPEC's check) passed:** QAOA's best shot equalled brute force in 15 of 15 runs.
+- **Tier 2 (better than guessing) passed on 2 of 3 instances:** we fixed the test before running it: optimal and balanced rates both above guessing at p < 0.01. Seed 2 missed on optimal rate, at p = 0.012, and we did not move the threshold. At p=2 all 3 instances passed, but p=2 was not the setting chosen in advance.
+- **What that means:** QAOA learned to produce balanced splits, but not lower cuts. The last column shows no real gain once a shot is balanced, and the mean cut of balanced shots is about the same as guessing (28.1 vs 28.2, 27.3 vs 27.5, 26.3 vs 26.4). So Gate 2 passed as written, with no evidence yet that QAOA finds better cuts than random sampling.
+- **Decision:** the team accepted Gate 2 as passed as written, with the limit that QAOA isn't shown to beat random guessing at this size.
+
+**First look at the full c432 (coarsening seeds 0, 1, 2; target 12; λ = 2.0).**
+
+| Coarse solver + FM | Cuts | Time per run |
+|---|---|---|
+| Random | 11, 14, 14 | about 0.01 s |
+| Simulated annealing | 12, 11, 11 | about 0.04 s |
+| Brute force | 11, 12, 12 | about 0.01 s |
+| QAOA, p=1 | 12, 12, 12 | 12–20 s |
+| KaHyPar on its own (no coarsening step of ours) | 11 | about 0.02 s |
 
 **Why it works.**
-- Total node weight is conserved at every coarsening level (tests).
-- Gate 2 part 2: coarsen c432 → 11 supernodes; QAOA p=1 matches brute-force cut **15** on that core (seed 0).
-- Final multilevel answers are still re-scored with `true_cut` / `is_balanced` on the original hypergraph.
+- **Coarsening preserves the problem.** On 20 random splits of c432 and c880, the cut and both side weights stay the same at every level. Tests also count the cut a second way, separately from `true_cut`.
+- **FM's bookkeeping is checked.** Over hundreds of moves, each predicted gain and running cut equals what `true_cut` reports. FM also raises an error if its final cut disagrees with `true_cut`.
+- **Weighted QUBO.** On all 4096 states of a real coarse instance, the balance term matches its formula. Cut terms equal the true cut when nets are exact, and the c17 Gate 1 result (cut 2, gap 1.0) still holds.
+- **QAOA's new option is safe.** `normalize` divides the Hamiltonian by its largest coefficient. Tests confirm reported energies stay on the QUBO's scale. It's off by default, and c17 results matched the previous commit exactly when we compared them, so the Phase 3 numbers stand.
+- **Answers.** Each final split is re-scored with `true_cut` and `is_balanced`.
 
 **Where it falls short.**
-- Heavy-edge matching is greedy — not KaHyPar-quality coarsening.
-- FM here is a simple single-move pass, not a full bucket-sort FM implementation.
-- Ablation (is FM doing all the work?) is Phase 6, not claimed here.
-- On large designs the multilevel cut is a heuristic; we do not claim it beats KaHyPar.
+- **"Matches brute force" proves little.** Random guessing matched in 14 of 15 runs, against QAOA's 15 of 15. With 4000 shots on 4096 states, guessing finds an optimum 86–100% of the time.
+- **FM may be doing most of the work.** On full c432, QAOA+FM is no better than the classical versions and takes hundreds of times longer. Coarse cuts of 12 to 32 became final cuts of 11 to 14, and the best coarse cut did not give the best final cut. Phase 6's ablation measures this properly.
+- **The QUBO is approximate here.** Coarse nets reach about 7 supernodes, so the QUBO uses the pair approximation on these instances.
+- **The statistics are simple.** The test pools shots across seeds, and it isn't corrected for running many settings.
+- **Small test size.** We ran 3 instances of one circuit at 12 qubits. 20 qubits hasn't been timed. The 1.5× weight cap is our own choice, not tuned or taken from the literature.
+- **Noise-free simulator only.** Hardware results could be much worse.
+- **The notebook has no Phase 5 section yet.** It's updated separately.
+
+### Known limitations
+
+1. **λ = 2.0 doesn't suit weighted supernodes.** On 2 of the 3 coarsened c432 instances, its lowest-energy state is not the best balanced split: cut 19 vs the optimum of 12 on seed 1, and cut 23 vs 16 on seed 2. The tuned values (0.801 on seed 0, 0.128 on seeds 1 and 2) came from a brute-force scan, which already knows the answer and can't run on designs too large to brute force. So tuning isn't a recipe that scales, and the multilevel table above still uses 2.0. Phase 6 must define a λ rule that doesn't rely on brute force.
+2. **FM can get stuck when balance is tight.** FM moves one node at a time. On c17 every single move from a 3/3 split gives 2/4, which breaks the rule, so no move is legal. It works on c432 because the rule allows sides from 91 to 96. FM also can't guarantee balance when supernodes are too heavy to fit, and the result would report that.
+3. **The CLI doesn't use multilevel yet.** `partition` and `benchmark` still can't run QAOA on c432. The CLI's skip message ("coarsening comes in Phase 5") and the Phase 4 note above ("until coarsening arrives in Phase 5") are out of date until the CLI is connected.

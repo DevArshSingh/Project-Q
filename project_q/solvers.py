@@ -440,6 +440,7 @@ def qaoa(
     eps: float = DEFAULT_EPS,
     seed: int = 0,
     best_known_cut: int | None = None,
+    normalize: bool = False,
 ) -> SolverResult:
     """QAOA on the Aer simulator (never hardware): tune the angles, then sample answers.
 
@@ -455,6 +456,12 @@ def qaoa(
     grid scan), so 8 starts miss it about 27% of the time and 20 miss it about 4%.
     Step 2: the Sampler measures `shots` shots at the best angles found.
     Step 3: `select_best_shot` picks the answer, and `_result` re-scores it with true_cut.
+
+    `normalize=True` divides H by its largest coefficient before building the circuit.
+    Supernode weights make coefficients reach the hundreds or more, and a cost layer rotates
+    by 2γ·coefficient, so γ in [0, π] would wrap around many times and make the landscape
+    very rough. Dividing H by a number keeps the same lowest-energy states. It is off by
+    default so that results on c17 (and its Phase 8 angles) stay exactly as they were.
     """
     t0 = time.perf_counter()
     if p < 1:
@@ -465,6 +472,8 @@ def qaoa(
         raise ValueError(f"QAOA refuses {qubo.num_vars} qubits > {QAOA_MAX_QUBITS} (hard cap)")
 
     operator, offset = qubo_to_ising(qubo)
+    scale = float(np.abs(operator.coeffs).max()) if normalize else 1.0
+    operator = operator / scale
     ansatz = qaoa_ansatz(operator, reps=p)
     estimator = EstimatorV2()
     rng = np.random.default_rng(seed)
@@ -511,9 +520,10 @@ def qaoa(
         backend="aer_simulator",
         gammas=[float(g) for g in gammas],
         betas=[float(b) for b in betas],
-        expected_energy=float(best.fun) + offset,  # on the QUBO's scale, comparable to E(x)
+        hamiltonian_scale=scale,
+        expected_energy=float(best.fun) * scale + offset,  # on the QUBO's scale, comparable to E(x)
         uniform_energy=offset,  # ⟨H⟩ of a uniform random guess, since each Z term averages 0
-        restart_energies=[float(r.fun) + offset for r in runs],
+        restart_energies=[float(r.fun) * scale + offset for r in runs],
         found_balanced=found_balanced,
         feasible_rate=balanced_shots / shots,
         p_optimal=p_optimal,

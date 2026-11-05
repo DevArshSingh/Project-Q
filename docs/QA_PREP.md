@@ -54,11 +54,11 @@ A: For partitioning today, you should use KaHyPar, and our scorecard shows that 
 
 ---
 
-## Phase 5: Coarsening + FM → Gate 2 (part 2)
+## Phase 5: Coarsening, FM refinement and multilevel
 
-**Q: How do you run QAOA on a 187-gate circuit when you only have 24 qubits?**
-A: Multilevel: heavy-edge matching merges gates that share many nets into weighted supernodes until ≤ ~12–20 remain. QAOA (or SA/random/brute) solves that small core; then we project the split back level by level and run Fiduccia–Mattheyses (FM) single-node moves that lower `true_cut` while keeping balance. CLI: `--solver multilevel-qaoa`.
+**Q: QAOA matched brute force on 12 qubits. Doesn't that show it works?**
+A: Not by itself. With 4000 shots on only 4096 states, random guessing also matched in 14 of 15 runs, against QAOA's 15 of 15. So we compared shot rates as well. QAOA gave more than twice as many balanced shots as guessing, but among balanced shots it hit the optimum about as often as guessing did (for example 0.55% vs 0.55%). Our test, fixed before running, passed on 2 of 3 instances at p=1. So QAOA learned to balance, and we have no evidence yet that it finds better cuts. Gate 2 passes as the SPEC wrote it, and we report that limit openly. This is not quantum advantage.
 
-**Q: Is QAOA doing the work, or is FM?**
-A: Fair question — Phase 6's ablation swaps the coarse solver for random/SA/brute with the same FM. Gate 2 part 2 only checks that QAOA matches brute force on the coarsened ~12-node core itself (before blaming FM).
+**Q: If FM refines everything anyway, what is QAOA contributing on c432?**
+A: Right now, nothing measurable. Random+FM got cuts of 11, 14 and 14, simulated annealing+FM 12, 11 and 11, and QAOA+FM 12, 12 and 12, at hundreds of times the runtime. KaHyPar got 11 in about 0.02 s. Most of the improvement comes from FM: coarse cuts of 12 to 32 became final cuts of 11 to 14. These are 3 seeds on one circuit, so Phase 6 runs a proper ablation, and we'll state plainly if random+FM matches QAOA+FM. Merging itself can't distort the score, because a coarse split costs exactly what its full-size split costs, and tests check this.
 
