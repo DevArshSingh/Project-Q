@@ -71,7 +71,7 @@ def make_record(
     design: str,
     hg: Hypergraph,
     result: SolverResult,
-    lam: float,
+    lam: float | None,
     eps: float,
     best_known_cut: int | None = None,
     best_known_source: str | None = None,
@@ -91,7 +91,8 @@ def make_record(
         shots=info.get("shots"),
         runtime_s=result.runtime_s,
         backend=info.get("backend", "classical"),
-        lam=lam if result.solver in USES_LAMBDA else None,
+        # Multilevel picks λ on its coarse circuit, so what it actually used outranks the argument.
+        lam=info.get("lam", lam) if result.solver in USES_LAMBDA else None,
         p=info.get("p"),
         seed=info.get("seed"),
         balanced=result.balanced,

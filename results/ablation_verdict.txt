@@ -1,0 +1,4 @@
+Random+FM matches QAOA+FM. c432, 12 supernodes, 10 seeds: mean final cut random+FM 13.5, QAOA+FM 11.5; QAOA lower on 6, tied on 2, random lower on 2; sign test p = 0.289.
+Descriptive only, 3 seeds can't reach p < 0.05. c432, 20 supernodes, 3 seeds: mean final cut random+FM 12.3, QAOA+FM 12.7; QAOA lower on 2, tied on 0, random lower on 1; sign test p = 1.000.
+Random+FM matches QAOA+FM. c880, 12 supernodes, 10 seeds: mean final cut random+FM 25.0, QAOA+FM 26.2; QAOA lower on 1, tied on 4, random lower on 5; sign test p = 0.219.
+Descriptive only, 3 seeds can't reach p < 0.05. c880, 20 supernodes, 3 seeds: mean final cut random+FM 28.0, QAOA+FM 28.7; QAOA lower on 1, tied on 0, random lower on 2; sign test p = 1.000.
