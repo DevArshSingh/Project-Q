@@ -90,6 +90,7 @@ Cut order if behind: routing (Phase 7, never start), c880, p=2, extra λ values,
 - **Ablation:** same multilevel pipeline with coarse solver = random / SA / brute / QAOA. Plot cut per variant (`plots/ablation.png`). State plainly if random+FM matches QAOA+FM.
 - **λ sweep:** λ ∈ {0.1, 0.3, 1, 2, 3, 10} (includes the default 2.0) on c17 and one coarsened design; plot cut vs balance and feasible rate (`plots/lambda_sweep.png`).
 - **Partition picture:** draw the hypergraph colored by group (`plots/partition_c17.png`).
+- Define a λ rule that doesn't rely on brute force, and show the ablation.
 - **Done when:** all three plots + `summary.csv` exist and the numbers come from real runs.
 
 ## Phase 7: Stretch: routing (ONLY if Gates 1 and 2 passed and user says go)
