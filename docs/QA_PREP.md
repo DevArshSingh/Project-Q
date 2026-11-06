@@ -30,7 +30,7 @@ A: N3 feeds two gates. If those gates land on different chips, the N3 signal has
 A: On c17 we check every one of the 64 possible assignments. The QUBO's cut energy equals the true cut on all 64, and brute force shows the lowest-energy state is exactly the best balanced split (cut 2), with an energy gap of 1.0 to the next state. Every solver's final answer is re-scored by plain-Python `true_cut`, never by the QUBO energy.
 
 **Q: Why λ = 2.0 for the balance penalty?**
-A: λ trades cut against balance. On c17 the best lopsided split sits only 1.0 above the optimum at λ = 1, but 2.0 above it at λ = 2. That makes a noisy solver less likely to drift to an unbalanced answer, while the cut terms still decide among balanced splits. We chose it on c17 only, and it fails on some larger designs, so Phase 6 adds a rule that computes λ from the circuit. That rule also gives 2.0 on c17.
+A: λ trades cut against balance. On c17 the best lopsided split sits only 1.0 above the optimum at λ = 1, but 2.0 above it at λ = 2. That widens the energy margin against unbalanced answers, while the cut terms still decide among balanced splits. It's an energy argument, not a sampling result: in our sweep on c17, QAOA gave more balanced shots at λ = 1 (68.6%) than at λ = 2 (63.2%), and more optimal shots at λ = 3 (19.2% vs 9.8%). We chose it on c17 only, and it fails on some larger designs, so Phase 6 adds a rule that computes λ from the circuit. That rule also gives 2.0 on c17.
 
 ---
 
@@ -49,7 +49,7 @@ A: We use IBM's `qiskit-addon-opt-mapper` for the conversion, but because it's a
 **Q: How can we trust the numbers in your scorecard?**
 A: Solvers don't report their own score. `make_record` recomputes the cut from each solver's final split using plain-Python `true_cut`, and balance comes from the one `is_balanced` rule, so every solver is judged the same way. Each JSON record keeps the split itself, so anyone can recheck it. If a split is unbalanced, we leave its gap empty so it can't look better than the best answer.
 
-**Q: KaHyPar gets cut 11 on c432 in about 0.03 s, and QAOA can't even run on it. Why use QAOA at all?**
+**Q: KaHyPar gets cut 11 on c432 in about 0.01 s, and QAOA can't even run on it. Why use QAOA at all?**
 A: For partitioning today, you should use KaHyPar, and our scorecard shows that plainly. Our contribution is the bridge from Verilog to a quantum-ready problem, plus an honest way to compare solvers on it. That lets a hardware engineer measure whether quantum solvers ever catch up. We don't claim quantum advantage. Note that 11 is the best cut found in that run, not a proven optimum.
 
 ---
@@ -57,7 +57,7 @@ A: For partitioning today, you should use KaHyPar, and our scorecard shows that 
 ## Phase 5: Coarsening, FM refinement and multilevel
 
 **Q: QAOA matched brute force on 12 qubits. Doesn't that show it works?**
-A: Not by itself. With 4000 shots on only 4096 states, random guessing also matched in 14 of 15 runs, against QAOA's 15 of 15. So we compared shot rates as well. QAOA gave more than twice as many balanced shots as guessing, but among balanced shots it hit the optimum about as often as guessing did (for example 0.55% vs 0.55%). Our test, fixed before running, passed on 2 of 3 instances at p=1. So QAOA learned to balance, and we have no evidence yet that it finds better cuts. Gate 2 passes as the SPEC wrote it, and we report that limit openly. This is not quantum advantage.
+A: Not by itself. With 4000 shots on only 4096 states, random guessing also matched in 14 of 15 runs, against QAOA's 15 of 15. So we compared shot rates as well. QAOA gave more than twice as many balanced shots as guessing, but among balanced shots it hit the optimum about as often as guessing did (for example 0.55% vs 0.55%). Our test, fixed before running, passed on 2 of 3 instances at p=1. So the tuned circuit favours balance, and we have no evidence yet that it finds better cuts. Gate 2 passes as the SPEC wrote it, and we report that limit openly. This is not quantum advantage.
 
 **Q: If FM refines everything anyway, what is QAOA contributing on c432?**
 A: Right now, nothing measurable. Random+FM got cuts of 11, 14 and 14, simulated annealing+FM 12, 11 and 11, and QAOA+FM 12, 12 and 12, at hundreds of times the runtime. KaHyPar got 11 in about 0.02 s. Most of the improvement comes from FM: coarse cuts of 12 to 32 became final cuts of 11 to 14. Those were 3 seeds on one circuit. Phase 6's larger ablation reached the same conclusion: random+FM matches QAOA+FM. Merging itself can't distort the score, because a coarse split costs exactly what its full-size split costs, and tests check this.
@@ -89,7 +89,7 @@ A: If noise dominates, we report that. The balanced and optimal rates would fall
 ## Phase 9: Notebook and README
 
 **Q: Are the notebook's results real? Can I reproduce them?**
-A: Yes. Result tables are computed from `results/summary.csv` when the notebook runs, and a test recomputes the README table from the same file. The notebook also repeats a c432 QAOA+FM run live and checks that it gives exactly the saved split. It doesn't need Yosys or an IBM account. Versions are pinned, and we tested a fresh install on a clean copy. The exceptions are the p=2 and Gate 2 tables, which are quoted from `docs/DEFENSE.md`, with the scripts that reproduce them named. Everything is from the noise-free Aer simulator.
+A: Yes. Result tables are computed from `results/summary.csv` when the notebook runs, and a test recomputes the README table from the same file. The notebook also repeats a c432 QAOA+FM run live and checks that it gives exactly the saved split. It doesn't need Yosys or an IBM account. Versions are pinned, and we tested a fresh install on a clean copy. The exceptions are the p=2 and Gate 2 tables, which are quoted from `docs/DEFENSE.md`, with the scripts that reproduce them named. Everything is from the noise-free Aer simulator. One caveat: 20-qubit rows only repeat with Aer pinned to one thread, which is now the default in `qaoa()`, and we verified that on one machine only. With default threads the same seed gave different cuts.
 
 **Q: Your own README says classical wins. So what did you actually build?**
 A: A working bridge and an honest way to measure it. A hardware engineer can give it Verilog and get a quantum-ready optimization problem, along with a score that uses the same classical rule for QAOA and classical solvers. Today KaHyPar beats or ties every multilevel mean, in 0.03 s or less, and random+FM matches QAOA+FM by a rule we fixed before running. We don't claim quantum beats classical. Our tool lets anyone re-run this comparison as quantum solvers change, and it's built in the same spirit as QOBLIB, though it isn't a QOBLIB submission.

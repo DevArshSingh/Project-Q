@@ -26,6 +26,12 @@ from scipy.optimize import minimize
 from project_q.parse_yosys import DEFAULT_EPS, Hypergraph, balance_bound, is_balanced, side_weights, true_cut
 from project_q.qubo import QUBO, qubo_energies, qubo_energy
 
+# Aer simulates large circuits on several threads. At 20 qubits that changes the last bits of each
+# energy from call to call, and COBYLA amplifies them into different angles, so the same seed gave
+# different cuts. One thread is slower but repeats exactly. Checked on one machine only: another
+# CPU may still differ in the last bits. Small circuits gave the same bits either way.
+AER_OPTIONS = {"backend_options": {"max_parallel_threads": 1}}
+
 BRUTE_FORCE_MAX_N = 20  # routine cap: 2^20 ≈ 1M assignments, well under a second
 BRUTE_FORCE_HARD_CAP = 24  # CLAUDE.md: never above 24 qubits / variables
 QAOA_MAX_QUBITS = 24  # CLAUDE.md: never above 24 qubits on the simulator
@@ -325,7 +331,7 @@ def kernighan_lin(
 def kahypar_solver(
     hg: Hypergraph, qubo: QUBO | None = None, eps: float = DEFAULT_EPS, seed: int = 0
 ) -> SolverResult:
-    """KaHyPar, an industry-grade hypergraph partitioner: the strongest classical baseline here.
+    """KaHyPar, a state-of-the-art hypergraph partitioner: the strongest classical baseline here.
 
     Unlike Kernighan-Lin it works on real nets instead of pairs, and it respects node
     weights. It is optional (SPEC): if it isn't installed we run Kernighan-Lin instead
@@ -475,7 +481,7 @@ def qaoa(
     scale = float(np.abs(operator.coeffs).max()) if normalize else 1.0
     operator = operator / scale
     ansatz = qaoa_ansatz(operator, reps=p)
-    estimator = EstimatorV2()
+    estimator = EstimatorV2(options=AER_OPTIONS)
     rng = np.random.default_rng(seed)
 
     def energy(angles: np.ndarray) -> float:
@@ -493,7 +499,8 @@ def qaoa(
     measured = ansatz.copy()
     measured.measure_all()
     values = _ansatz_values(measured, gammas, betas)
-    counts = SamplerV2(seed=seed).run([(measured, values)], shots=shots).result()[0].data.meas.get_counts()
+    sampler = SamplerV2(seed=seed, options=AER_OPTIONS)
+    counts = sampler.run([(measured, values)], shots=shots).result()[0].data.meas.get_counts()
 
     bits, found_balanced = select_best_shot(counts, hg, eps)
     balanced_shots = sum(n for key, n in counts.items() if is_balanced(hg, _bits_from_key(key), eps))

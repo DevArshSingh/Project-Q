@@ -1,8 +1,14 @@
 .venv/
 .env
+.env.*
+qiskit-ibm.json
+*credentials*.json
+apikey*
 __pycache__/
 *.pyc
 results/*.token
+# One JSON per CLI run, named <design>_<solver>_<time>. results/hardware_c17*.json stay tracked.
+results/c*_*.json
 .ipynb_checkpoints/
 *.egg-info/
 .pytest_cache/

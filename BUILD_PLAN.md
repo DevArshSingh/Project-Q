@@ -33,13 +33,15 @@ You are building Project Q for the IBM Qiskit Fall Fest 2026 (UW Quantum Club). 
 | Nov 6 | Rehearse twice, fix only bugs, final push before 6:30 PM |
 Cut order if behind: routing (Phase 7, never start), c880, p=2, extra λ values, poster.
 
-## Owners (fill in with teammates' names)
+## Owners
 | Phase | Owner |
 |---|---|
-| 1 Parser, 5 Coarsening | _(hardware lead)_ |
-| 2 QUBO, 6 Benchmarks | _(formulation lead)_ |
-| 3 QAOA, 8 Hardware | _(quantum lead)_ |
-| 4 CLI, 9 Notebook + README, slides | _(demo lead)_ |
+| 0 Environment, 1 Parser, 2 QUBO | Dev Arsh |
+| 3 QAOA, 4 CLI | Shrugal |
+| 5 Coarsening, 8 Hardware | Prisha |
+| 6 Benchmarks, 9 Notebook + README | Moath |
+| 7 Routing | Not built (stretch goal) |
+| Review, audit, final polish | Dev Arsh |
 
 ---
 
@@ -93,7 +95,9 @@ Cut order if behind: routing (Phase 7, never start), c880, p=2, extra λ values,
 - Define a λ rule that doesn't rely on brute force, and show the ablation.
 - **Done when:** all three plots + `summary.csv` exist and the numbers come from real runs.
 
-## Phase 7: Stretch: routing (ONLY if Gates 1 and 2 passed and user says go)
+## Phase 7: Stretch: routing: not built (stretch goal)
+
+Intentionally not built. The original condition was: only if Gates 1 and 2 passed and the user says go.
 - 6×6 grid, 4–5 two-pin wires, 3–4 classical candidate paths each (BFS/A* variants). QUBO per SPEC (length + one-hot penalty A + conflict penalty B, with A,B > any length saving). ≤ 20 qubits.
 - Solve with brute force, SA, QAOA on Aer. Draw the routed grid.
 - **Done when:** QAOA result is valid (no collisions, one path per wire) and compared to brute force. Label it a simplified 2-pin version of QOBLIB's routing class.
@@ -108,16 +112,16 @@ Budget: ~10 minutes of QPU time TOTAL, so do exactly one small job after everyth
 6. Do not re-run to get a "better" result. Keep leftover minutes in reserve.
 
 ## Phase 9: Demo + README
-- `notebooks/demo.ipynb`: runs c17 end to end (Verilog → netlist → hypergraph → QUBO → QAOA → scorecard) with short explanations.
+- `notebooks/project_q.ipynb`: runs c17 end to end (Verilog → netlist → hypergraph → QUBO → QAOA → scorecard) with short explanations.
 - `README.md`: what it is, install steps (Yosys, venv), 3 example commands, results table, honest limitations (qubit limit, pair approximation, classical wins today, hardware run is a single noisy proof run), and how it relates to QOBLIB.
 - Pin versions in `requirements.txt` from `pip freeze` for the packages used.
 - **Done when:** a fresh clone can follow the README and reproduce the c17 run.
 
 ## Final checklist
-- [ ] `project-q partition design.v --solver qaoa` works
-- [ ] Results table (all solvers × c17, c432, c880)
-- [ ] Ablation chart, λ sweep plot, partition picture
+- [x] `project-q partition design.v --solver qaoa` works
+- [x] Results table (all solvers × c17, c432, c880)
+- [x] Ablation chart, λ sweep plot, partition picture
 - [ ] One hardware run reported honestly
-- [ ] Routing demo (stretch)
-- [ ] README + demo notebook
-- [ ] No tokens or secrets in git history
+- [ ] Routing demo: not built (stretch goal)
+- [x] README + `notebooks/project_q.ipynb`
+- [x] No tokens or secrets in git history

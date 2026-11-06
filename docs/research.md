@@ -2,6 +2,8 @@
 
 Nov 2, 2026 · @Dev
 
+> **Planning document, written before the build.** It records what we intended, so its checklists and plans are out of date. Routing was not built (stretch goal), and the EPFL circuits and c499 were not run. For what was actually built and measured, see `README.md` and `docs/DEFENSE.md`.
+
 ## 1. The project in one page
 
 We are building a tool that takes a chip design written in Verilog, splits it across two chips with as few connecting wires as possible, and uses IBM's quantum algorithm QAOA (in Qiskit) to search for that split. It then compares the quantum answer honestly against the best classical tools.
@@ -625,7 +627,7 @@ project_q/
   scorecard.py # JSON results
   cli.py # project-q partition design.v
   benchmarks/ # c17.v, c432.v, c880.v ...
-  notebooks/demo.ipynb
+  notebooks/project_q.ipynb
   `requirements.txt`
 ```
 
@@ -643,7 +645,7 @@ project_q/
 
 - [ ] One real IBM hardware run, numbers reported as they are
 
-- [ ] Routing demo on one grid (stretch)
+- [ ] Routing demo on one grid: not built (stretch goal)
 
 - [ ] README with install steps and an example
 
@@ -659,7 +661,7 @@ project_q/
 
 4.  **Honest results (40 s):** the solver table and ablation. Classical wins today, and here is exactly by how much.
 
-5.  **Why it matters (20 s):** a ready-made benchmark for hardware engineers, in the spirit of IBM's QOBLIB and advantage tracking. Routing shows the flow extends to the next design step.
+5.  **Why it matters (20 s):** a ready-made benchmark for hardware engineers, in the spirit of IBM's QOBLIB. Routing was not built, so don't present it. We make no claim of quantum advantage.
 
 ## 12. Risks, judge questions and sources
 
@@ -689,7 +691,7 @@ The biggest risk is time lost on parsing and setup, not the quantum part. Freeze
 
 - **"Has this been done?"** "The math has (Li et al. 2026; QUBO graph partitioning since 2017). We found no tool that takes real Yosys netlists into Qiskit."
 
-- **"Did you run on real hardware?"** Show the hardware run with its actual numbers.
+- **"Did you run on real hardware?"** Say what is true at that moment: show the one run with its actual numbers if it has happened, and if it hasn't, say only the dry run exists.
 
 ### Sources
 

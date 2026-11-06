@@ -34,7 +34,7 @@ We make no claim of quantum advantage anywhere.
 - Original gate and wire names are lost. Nodes are labelled by the wire they drive (e.g. `N22`, `new_n8`).
 - Nets touching more than 50 gates (clock/reset style) are dropped and are not counted in the cut at all.
 - Wires touching only one gate are dropped, including output pins, so the cost of I/O pins per chip is ignored.
-- Only tested on c17, a 6-gate, combinational (no flip-flops), single-module design. Sequential and multi-module designs are untested.
+- At this phase, only tested on c17, a 6-gate, combinational (no flip-flops), single-module design. Phase 4 adds c432 and c880, also combinational. Sequential and multi-module designs are still untested.
 
 ---
 
@@ -96,7 +96,7 @@ We make no claim of quantum advantage anywhere.
 - **Beating uniform guessing is a low bar.** We have not yet compared QAOA's sampling with simulated annealing's, and c17 is easy for every classical solver here. This is not quantum advantage.
 - **The optimizer can miss the best angles.** One COBYLA start at p=1 reaches the minimum only about 15% of the time, so even 20 starts should miss about 4% of the time. p=1 seed 4 did miss, stopping at ⟨E⟩ = 4.982. We don't know the true p=2 minimum because we did not scan it.
 - **Lowest energy is not the same as most optimal shots.** The optimizer lowers average energy only. At p=2, seed 0 had lower energy than seed 2 (3.439 vs 3.482) but fewer optimal shots (15.6% vs 24.7%).
-- **Only 6 qubits so far.** Larger designs are untested, so Gate 2 stays open until the ~12-node check in Phase 5. The balance penalty couples every pair of qubits (15 terms on c17), so the circuit grows quickly with size and could be hard to run on real hardware.
+- **Only 6 qubits at this phase.** Larger designs were untested, so Gate 2 stayed open until the ~12-node check in Phase 5. The balance penalty couples every pair of qubits (15 terms on c17), so the circuit grows quickly with size and could be hard to run on real hardware.
 - **Simulator only.** These results have no noise, so hardware results may be much worse.
 - **The mirror split is the same answer.** The Hamiltonian cannot tell a split from its mirror image, so "optimal shots" counts both.
 
@@ -109,9 +109,9 @@ We make no claim of quantum advantage anywhere.
 - Each run saves one JSON file, called a record: the cut, how far it is from the best known cut (the gap), whether it's balanced, and the runtime.
 - A solver can't mark its own work. The record recomputes the cut from the final split, using the same `true_cut` for every solver.
 - We added two larger circuits, c432 (187 gates) and c880 (480 gates). QAOA can't run on them yet because they need far more than our 24-qubit limit.
-- We also added KaHyPar, an industry-grade classical partitioner, as the strongest baseline.
+- We also added KaHyPar, a state-of-the-art classical partitioner, as the strongest baseline.
 
-**Results from `benchmark` (seed 0).**
+**Historical: results from `benchmark` at this phase (seed 0).** `benchmark` now also runs the multilevel pipeline, so today's output has different rows. Phase 6 is the real table.
 
 | Solver | c17 cut | c432 cut | c880 cut |
 |---|---|---|---|
@@ -163,7 +163,7 @@ KaHyPar takes about 0.05 s or less per run on these designs, and classical solve
 **Verdict.**
 - **Tier 1 (the SPEC's check) passed:** QAOA's best shot equalled brute force in 15 of 15 runs.
 - **Tier 2 (better than guessing) passed on 2 of 3 instances:** we fixed the test before running it: optimal and balanced rates both above guessing at p < 0.01. Seed 2 missed on optimal rate, at p = 0.012, and we did not move the threshold. At p=2 all 3 instances passed, but p=2 was not the setting chosen in advance.
-- **What that means:** QAOA learned to produce balanced splits, but not lower cuts. The last column shows no real gain once a shot is balanced, and the mean cut of balanced shots is about the same as guessing (28.1 vs 28.2, 27.3 vs 27.5, 26.3 vs 26.4). So Gate 2 passed as written, with no evidence yet that QAOA finds better cuts than random sampling.
+- **What that means:** The tuned circuit produces more balanced splits, but not lower cuts. The last column shows no real gain once a shot is balanced, and the mean cut of balanced shots is about the same as guessing (28.1 vs 28.2, 27.3 vs 27.5, 26.3 vs 26.4). So Gate 2 passed as written, with no evidence yet that QAOA finds better cuts than random sampling.
 - **Decision:** the team accepted Gate 2 as passed as written, with the limit that QAOA isn't shown to beat random guessing at this size.
 
 **First look at the full c432 (coarsening seeds 0, 1, 2; target 12; λ = 2.0).**
@@ -180,7 +180,7 @@ KaHyPar takes about 0.05 s or less per run on these designs, and classical solve
 - **Coarsening preserves the problem.** On 20 random splits of c432 and c880, the cut and both side weights stay the same at every level. Tests also count the cut a second way, separately from `true_cut`.
 - **FM's bookkeeping is checked.** Over hundreds of moves, each predicted gain and running cut equals what `true_cut` reports. FM also raises an error if its final cut disagrees with `true_cut`.
 - **Weighted QUBO.** On all 4096 states of a real coarse instance, the balance term matches its formula. Cut terms equal the true cut when nets are exact, and the c17 Gate 1 result (cut 2, gap 1.0) still holds.
-- **QAOA's new option is safe.** `normalize` divides the Hamiltonian by its largest coefficient. Tests confirm reported energies stay on the QUBO's scale. It's off by default, and c17 results matched the previous commit exactly when we compared them, so the Phase 3 numbers stand.
+- **QAOA's new option is safe.** `normalize` divides the Hamiltonian by its largest coefficient. Tests confirm reported energies stay on the QUBO's scale. It's off by default in `qaoa()`, but `multilevel()` turns it on, so the README's QAOA + FM rows are normalized. c17 results matched the previous commit exactly when we compared them, so the Phase 3 numbers stand.
 - **Answers.** Each final split is re-scored with `true_cut` and `is_balanced`.
 
 **Where it falls short.**
@@ -188,7 +188,7 @@ KaHyPar takes about 0.05 s or less per run on these designs, and classical solve
 - **FM may be doing most of the work.** On full c432, QAOA+FM is no better than the classical versions and takes hundreds of times longer. Coarse cuts of 12 to 32 became final cuts of 11 to 14, and the best coarse cut did not give the best final cut. Phase 6's ablation measured this, and FM does most of the work.
 - **The QUBO is approximate here.** Coarse nets reach about 7 supernodes, so the QUBO uses the pair approximation on these instances.
 - **The statistics are simple.** The test pools shots across seeds, and it isn't corrected for running many settings.
-- **Small test size.** We ran 3 instances of one circuit at 12 qubits. 20 qubits hasn't been timed. The 1.5× weight cap is our own choice, not tuned or taken from the literature.
+- **Small test size.** We ran 3 instances of one circuit at 12 qubits. 20 qubits hadn't been timed at this phase; Phase 6 did that. The 1.5× weight cap is our own choice, not tuned or taken from the literature.
 - **Noise-free simulator only.** Hardware results could be much worse.
 
 ### Known limitations
@@ -210,7 +210,7 @@ KaHyPar takes about 0.05 s or less per run on these designs, and classical solve
 - The formula gives better QUBOs than a fixed λ = 2.0, but its lowest-energy state is still the true best split on only 11 of 23 new test cases.
 - This all ran on the noise-free Aer simulator. No IBM hardware was used.
 
-**How to reproduce it.** `python scripts/phase6.py estimate`, then `python scripts/phase6.py all --confirmed`. The full run took about 42 minutes, and all 210 runs in `summary.csv` finished without errors. Seeds are in the CSV, and each row keeps its split in `assignment`, so anyone can recheck its cut. Runtimes will differ between runs.
+**How to reproduce it.** `python scripts/phase6.py estimate`, then `python scripts/phase6.py all --confirmed`. The original full run took about 42 minutes with Aer's default threads. With one thread, the six 20-qubit rows alone take about 84 minutes, so expect about 105 minutes in total (estimated; we regenerated only those six rows). All 210 runs in `summary.csv` finished without errors. Seeds are in the CSV, and each row keeps its split in `assignment`, so anyone can recheck its cut. Runtimes will differ between runs.
 
 **Results table (mean final cut, then lowest to highest).** QAOA is p=1 with 20 restarts and 4000 shots. c432 and c880 have no proven optimum.
 
@@ -229,7 +229,7 @@ KaHyPar takes about 0.05 s or less per run on these designs, and classical solve
 | Random + FM, 20 supernodes | | 12.3 (11–14) | 28.0 (26–30) | 0.01 s / 0.06 s |
 | Simulated annealing + FM, 20 | | 11.0 (11–11) | 28.7 (24–33) | 0.05 s / 0.12 s |
 | Brute force + FM, 20 | | 11.3 (11–12) | 26.3 (24–29) | 0.63 s / 0.81 s |
-| QAOA + FM, 20 | | 12.7 (11–16) | 28.7 (27–31) | 252 s / 171 s |
+| QAOA + FM, 20 | | 12.7 (11–16) | 27.7 (27–28) | 938 s / 739 s (one thread) |
 
 The 12-supernode rows use 10 seeds, the 20-supernode rows use 3, and flat c432 and c880 rows use 10.
 
@@ -240,15 +240,15 @@ The 12-supernode rows use 10 seeds, the 20-supernode rows use 3, and flat c432 a
 | c432, 12, 10 seeds | **Random+FM matches QAOA+FM** | 13.5 vs 11.5 | 6 / 2 / 2 | 0.289 |
 | c880, 12, 10 seeds | **Random+FM matches QAOA+FM** | 25.0 vs 26.2 | 1 / 4 / 5 | 0.219 |
 | c432, 20, 3 seeds | Descriptive only | 12.3 vs 12.7 | 2 / 0 / 1 | 1.000 |
-| c880, 20, 3 seeds | Descriptive only | 28.0 vs 28.7 | 1 / 0 / 2 | 1.000 |
+| c880, 20, 3 seeds | Descriptive only | 28.0 vs 27.7 | 1 / 1 / 1 | 1.000 |
 
 **What the ablation shows.**
 - **FM does most of the work.** Random's coarse cuts average 28.6 on c432 and 61 on c880 at 12 supernodes. FM brings them to 13.5 and 25.0.
 - **A better coarse cut doesn't reliably mean a better final cut.** On c880 at 12 supernodes, brute force has the best possible coarse cuts (mean 43.4), yet random's far worse ones (mean 61) end slightly lower, 25.0 vs 26.1.
-- **QAOA's coarse answers depend on size.** At 12 qubits, its best shot equals brute force's coarse cut in 20 of 20 runs. As Phase 5 showed, 4000 shots nearly cover 4096 states, so that says little. At 20 qubits, where 4000 shots can't cover about a million states, it matched in 0 of 6 runs and none of its shots were optimal (coarse cut 19 vs 12–13 on c432, 42–45 vs 37–41 on c880).
+- **QAOA's coarse answers depend on size.** At 12 qubits, its best shot equals brute force's coarse cut in 20 of 20 runs. As Phase 5 showed, 4000 shots nearly cover 4096 states, so that says little. At 20 qubits, where 4000 shots can't cover about a million states, it matched in 0 of 6 runs and none of its shots were optimal (coarse cut 19–20 vs 12–13 on c432, 42–47 vs 37–41 on c880). An earlier run with Aer's default threads did match on one row (c880 seed 0, coarse cut 41, 1 optimal shot in 4000), so read this as "rarely", not "never".
 - **Classical tools are ahead.** On c432 at 12 supernodes, simulated annealing+FM has the same final cuts as QAOA+FM on all 10 seeds, in 0.04 s instead of 17.9 s. KaHyPar on its own is as good as or better than every multilevel row's mean on both designs, in 0.03 s or less.
 
-**The λ rule (`suggest_lambda` in `project_q/qubo.py`).** λ = d̄ / (δ_out² − δ_min²), where d̄ is the average number of nets per node, δ_min is the smallest possible imbalance, and δ_out is the first imbalance the balance rule rejects. So going from the most even split to the first illegal one costs about as much as the wires on a typical node. It uses only the circuit and ε. On c17 it gives exactly 2.0, so Gate 1 and the Phase 8 angles don't change. `multilevel` and the CLI use it by default on the coarse circuit, and `--lam` overrides it.
+**The λ rule (`suggest_lambda` in `project_q/qubo.py`).** λ = d̄ / (δ_out² − δ_min²), where d̄ is the average number of nets per node (counting only nets of 8 nodes or fewer, the ones the QUBO can see), δ_min is the smallest possible imbalance, and δ_out is the first imbalance the balance rule rejects. So going from the most even split to the first illegal one costs about as much as the wires on a typical node. It uses only the circuit and ε. On c17 it gives exactly 2.0, so Gate 1 and the Phase 8 angles don't change. `multilevel` and the CLI use it by default on the coarse circuit, and `--lam` overrides it.
 
 | Lowest-energy state is the true best split | Rule | Fixed λ = 2.0 |
 |---|---|---|
@@ -270,7 +270,7 @@ On the 23 held-out instances (`results/lambda_rule.csv`), the rule's lowest-ener
 - **Scoring.** Every cut in the CSV comes through `make_record`, which recomputes it with `true_cut`. A test recomputes it again from the saved split. The partition picture raises an error if its cut count disagrees with `true_cut`.
 - **Fair pairing.** The same seed gives every coarse solver the same coarse circuit, and a test checks this.
 - **c17 rates differ slightly from Phase 3.** Phase 6 reports 63.2% balanced and 9.8% optimal shots, against 62.4% and 9.2%, because it uses the Yosys netlist and Phase 3 the hand-written c17. Their qubit order differs, so the same seed draws different shots. On seed 0 both reached the same ⟨E⟩ of 4.026.
-- **Repeatability.** A test confirms that re-running gives the same row apart from runtime, and that classical rows don't change with Python's hash order.
+- **Repeatability.** A test confirms that re-running gives the same row apart from runtime, and that classical rows don't change with Python's hash order. That test uses small jobs, and it missed a real problem: with Aer's default threads, 20-qubit rows changed between runs with the same seed (c432 seed 2 gave cut 16, then 11; c880 seed 2 gave 31, then 33). The last bits of each energy varied between calls, and COBYLA amplified them. `qaoa()` now pins Aer to one thread, and the six 20-qubit rows here were regenerated that way, which changed the c880 mean from 28.7 to 27.7. Three pinned runs gave identical rows, including the split, and the other 204 rows didn't change. A new test repeats a 16-qubit job. **This was verified on one machine only**, and another CPU may still differ in the last bits.
 - **Verdict.** Tests check the wording on hand-made data, including cases where QAOA is ahead but not significantly.
 - **The CLI.** Tests check that above 24 nodes `brute`, `qaoa`, `random` and `sa` go through multilevel, and that `multilevel-brute` is never reported as a proven best.
 - **QUBO check.** The rule returns 2.0 on c17, and Gate 1 still holds there (cut 2, gap 1.0).
@@ -285,6 +285,12 @@ On the 23 held-out instances (`results/lambda_rule.csv`), the rule's lowest-ener
 - **`p_optimal` means the coarse level** on multilevel rows, not the full circuit.
 - **Best known cuts on c432 and c880 are only the best in this file**, labelled `best_of_this_run`.
 - **Limits that remain.** p=1 only, simulator only, two circuits, and netlists re-synthesized as described under Phase 4. FM on c17 is still stuck (Known limitation 2), so c17 stays flat. Brute force on 21–24 node designs is still refused.
+
+---
+
+## Phase 7: Routing
+
+Not built (stretch goal). Nothing in the code, results or notebook depends on it, and we make no routing claims.
 
 ---
 
@@ -348,8 +354,8 @@ On FakeFez, 2-qubit gate counts across seeds 0–9 ranged from 50 to 57, and dep
 ## Phase 9: Notebook, README and pinned versions
 
 **In plain words.**
-- The notebook now covers Phases 3–6 and ends with a limitations section. It's the required submission.
-- It runs the quick steps live, such as QAOA on c17 and one c432 run. It reads the slow results from `results/` and `plots/` instead of repeating 42 minutes of runs.
+- The notebook now covers Phases 1–6 and ends with a limitations section. It's the required submission.
+- It runs the quick steps live, such as QAOA on c17 and one c432 run. It reads the slow results from `results/` and `plots/` instead of repeating well over an hour of runs.
 - `project_q_executed.ipynb` is the same notebook with its outputs saved, so judges can read it without running anything.
 - The README covers install steps, three commands, the results table, limitations, how we relate to QOBLIB, and the fact that we used AI assistance.
 - `requirements.txt` now pins the exact versions we used.
@@ -369,4 +375,3 @@ On FakeFez, 2-qubit gate counts across seeds 0–9 ranged from 50 to 57, and dep
 - **The executed copy can go stale.** A test confirms its cells match the builder, but not that its outputs are from the current code or results. Re-run `python scripts/build_notebook.py --execute` after any change.
 - **Pins cover direct dependencies only**, and only Python 3.12 on Linux has been tried. `requirements-optional.txt` stays unpinned because a test expects the plain line `kahypar`. KaHyPar results were produced with 1.3.7.
 - **The hardware run is still pending.** The README and notebook say no job has been run, and they must be updated if it happens. A test reminds us: it requires that sentence only while `results/hardware_c17.json` doesn't exist.
-- **SPEC and BUILD_PLAN still say `notebooks/demo.ipynb`.** The real file is `notebooks/project_q.ipynb`, as in the Notebook rule.
