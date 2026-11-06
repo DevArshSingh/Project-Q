@@ -167,6 +167,60 @@ def plot_lambda_sweep(rows: list[dict], path: str | Path) -> Path:
     return _save(fig, path)
 
 
+# --------------------------------------------------------------------------- hardware vs Aer
+
+
+def plot_hardware_vs_aer(report: dict, path: str | Path) -> Path:
+    """Phase 8. Left: every state, Aer next to the measured shots. Right: the two rates vs guessing."""
+    is_hardware = report["kind"] == "hardware"
+    label = "IBM hardware" if is_hardware else "Dry run (simulated noise)"
+    fig, axes = _figure(1, 2, (14, 4.6), gridspec_kw={"width_ratios": [3.4, 1]})
+    ax_states, ax_rates = axes[0]
+
+    aer, measured = report["aer_counts"], report["counts"]
+    aer_shots, measured_shots = sum(aer.values()), sum(measured.values())
+    width = len(report["qubit_order"])
+    states = [format(k, f"0{width}b") for k in range(1 << width)]
+    states.sort(key=lambda s: (-aer.get(s, 0), s))  # most likely first, so noise shows up as a broken slope
+    xs = range(len(states))
+    aer_pct = [100 * aer.get(s, 0) / aer_shots for s in states]
+    measured_pct = [100 * measured.get(s, 0) / measured_shots for s in states]
+    ax_states.bar([x - 0.21 for x in xs], aer_pct, width=0.38, color=SERIES_1, label="Aer (no noise)")
+    ax_states.bar([x + 0.21 for x in xs], measured_pct, width=0.38, color=SERIES_2, label=label)
+    top = max(aer_pct + measured_pct)
+    for x, s in zip(xs, states):
+        if s in report["optimal_states"]:
+            ax_states.plot(x, max(aer_pct[x], measured_pct[x]) + 0.03 * top, "v", ms=8, color=INK, mec=SURFACE, mew=1)
+    ax_states.plot([], [], "v", ms=8, color=INK, label=f"Optimal split (cut {report['proven_best_cut']})")
+    ax_states.set_xticks(list(xs), states, rotation=90, fontsize=6.5, family="monospace")
+    ax_states.set_xlim(-0.8, len(states) - 0.2)
+    ax_states.set_ylim(0, 1.12 * top)
+    ax_states.set_ylabel("Share of shots (%)", color=INK_2)
+    ax_states.set_xlabel("Measured state, most likely on Aer first", color=INK_2)
+    ax_states.legend(fontsize=9, labelcolor=INK_2, frameon=False, loc="upper right")
+    ax_states.set_title(f"c17, p=1, {measured_shots} shots: {report['backend']}", fontsize=11, color=INK, loc="left")
+
+    rates = [("feasible_rate", "Balanced"), ("optimal_split_probability", "Optimal")]
+    for x, (field, _) in enumerate(rates):
+        pairs = ((x - 0.21, report["aer"][field], SERIES_1), (x + 0.21, report["measured"][field], SERIES_2))
+        for bar_x, value, color in pairs:
+            ax_rates.bar(bar_x, 100 * value, width=0.38, color=color)
+            ax_rates.annotate(f"{100 * value:.1f}%", (bar_x, 100 * value), xytext=(0, 3), textcoords="offset points",
+                              ha="center", fontsize=8.5, color=INK)  # fmt: skip
+        guess = 100 * report["uniform_guessing"][field]
+        ax_rates.plot([x - 0.46, x + 0.46], [guess, guess], color=INK_2, lw=1.2, ls=(0, (4, 3)))
+    ax_rates.plot([], [], color=INK_2, lw=1.2, ls=(0, (4, 3)), label="Uniform guessing")
+    ax_rates.set_xticks(range(len(rates)), [name for _, name in rates])
+    ax_rates.set_ylim(0, 100)
+    ax_rates.set_ylabel("Share of shots (%)", color=INK_2)
+    ax_rates.legend(fontsize=9, labelcolor=INK_2, frameon=False, loc="upper right")
+    ax_rates.set_title("Rates that matter", fontsize=11, color=INK, loc="left")
+    if not is_hardware:
+        fig.suptitle("DRY RUN: simulated, not hardware results", fontsize=12, color=INK, x=0.5, y=1.02)
+    fig.subplots_adjust(wspace=0.16)
+    return _save(fig, path)
+
+
 # --------------------------------------------------------------------------- the partition picture
 
 

@@ -71,3 +71,15 @@ A: We found no clear evidence that it does. We kept coarsening and FM the same a
 
 **Q: How do you choose λ without brute force, and does it work?**
 A: We use λ = d̄ / (δ_out² − δ_min²): going from the most even split to the first illegal one costs about as much as the wires on a typical node. It uses only the circuit and gives exactly 2.0 on c17. We tested it on 23 instances we hadn't looked at, using brute force only to score it. Its lowest-energy state was the true best split on 11 of 23, against 8 of 23 for fixed λ = 2.0, and it was never worse. So it's better, but it isn't solved. It also didn't change what QAOA samples on the instance we swept: balanced shots stayed around 22% at every λ from 0.1 to 10. We didn't adjust the formula after seeing those results.
+
+---
+
+## Phase 8: The single IBM hardware run
+
+These answers describe the design. Until the job has run, say plainly that there are no hardware numbers yet.
+
+**Q: What does your hardware run actually prove?**
+A: Only that the circuit our pipeline builds from Verilog can run on a real chip, and how much noise changes its output. It doesn't show quantum beating classical, because brute force solves c17 instantly. Finding cut 2 proves almost nothing, since 4000 random shots on 64 states would almost surely include an optimal split. So we compare the rates of balanced and optimal shots against noise-free Aer (68.65% and 10.15% in our baseline run) and uniform guessing (31.25% and 3.125%). The angles were tuned on Aer, and scoring uses the same classical `true_cut` and `is_balanced` as every other solver.
+
+**Q: What if noise dominates? And why did you try 10 transpile seeds if you won't re-run?**
+A: If noise dominates, we report that. The balanced and optimal rates would fall toward guessing, and that's a real result about running this circuit on today's hardware. We get one run: the script records the job before sending it and refuses a second `--submit`, because re-running until the numbers look good would be picking the result we like. The 10 seeds are different. They only compare circuit sizes before any shots are taken, and they use no QPU time, so they can't favour a good-looking answer. We keep the version with the fewest 2-qubit gates and log all 10 in the results.
