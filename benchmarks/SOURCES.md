@@ -2,6 +2,8 @@
 
 ## ISCAS-85 circuits
 
+`c17.v` is the standard 6-NAND ISCAS-85 c17, written by hand for this project rather than downloaded.
+
 | File | Source | SHA-256 |
 |---|---|---|
 | `c432.v` | https://raw.githubusercontent.com/jpsety/verilog_benchmark_circuits/b4c6b6203b95b5314d47365f4a8196c08145519b/c432.v | `3b9262109d364dc463f0ee516f5d20c78bd2b8ffb2a38daece4a67cc8af39531` |
@@ -25,4 +27,4 @@ https://raw.githubusercontent.com/kahypar/kahypar/v1.3.7/config/cut_kKaHyPar_sea
 
 SHA-256: `64ebd58a4f98b95bf87ae3de5341b2be00b09e122a0526ef65a799e39bb63dd8`
 
-KaHyPar is licensed under GPLv3 or later. It's optional (`requirements-optional.txt`), and its wheel doesn't include this file.
+KaHyPar's GitHub repository lists GPL-3.0 and its README says GPLv3, while the classifier on its Python wheel says GPLv3 or later. This project adds no license of its own. KaHyPar is optional (`requirements-optional.txt`), and its wheel doesn't include this file.
