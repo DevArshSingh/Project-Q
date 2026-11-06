@@ -9,6 +9,8 @@ from qiskit.circuit.library import qaoa_ansatz
 from qiskit.quantum_info import Statevector
 from qiskit_aer.primitives import EstimatorV2
 
+import project_q.solvers as solvers
+from project_q.coarsen import coarsen
 from project_q.parse_yosys import Hypergraph, is_balanced, load_hypergraph, load_netlist, true_cut
 from project_q.qubo import QUBO, build_partition_qubo, qubo_energy
 from project_q.solvers import _ansatz_values, brute_force, qaoa, qubo_to_ising, select_best_shot
@@ -147,6 +149,28 @@ def test_same_seed_same_result():
     assert first.assignment == second.assignment
     assert first.info["counts"] == second.info["counts"]
     assert first.info["gammas"] == second.info["gammas"]
+
+
+def test_large_circuits_repeat_because_aer_is_pinned_to_one_thread(monkeypatch):
+    # 16 qubits is big enough for Aer to go multithreaded, unlike every small test above.
+    seen = []
+
+    def recording(cls):
+        def build(**kwargs):
+            seen.append(kwargs.get("options"))
+            return cls(**kwargs)
+
+        return build
+
+    monkeypatch.setattr(solvers, "EstimatorV2", recording(solvers.EstimatorV2))
+    monkeypatch.setattr(solvers, "SamplerV2", recording(solvers.SamplerV2))
+    hg = coarsen(load_hypergraph(load_netlist(C17_JSON.with_name("c432.json"))), target=16, seed=0).coarsest
+    qubo = build_partition_qubo(hg)
+    first, second = (qaoa(hg, qubo, restarts=1, shots=200, seed=3, normalize=True) for _ in range(2))
+    assert seen and all(o["backend_options"]["max_parallel_threads"] == 1 for o in seen)
+    assert first.info["gammas"] == second.info["gammas"] and first.info["betas"] == second.info["betas"]
+    assert first.info["expected_energy"] == second.info["expected_energy"]
+    assert first.info["counts"] == second.info["counts"]
 
 
 def test_qaoa_guards():
