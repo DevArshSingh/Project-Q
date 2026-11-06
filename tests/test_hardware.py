@@ -648,11 +648,21 @@ def test_token_is_scrubbed_from_a_saved_error(world, monkeypatch, capsys):
     assert files_contain(world.tmp, SENTINEL) == []
 
 
-# ----------------------------------------------------------------- nothing real was produced
+# ----------------------------------------------------------------- the one real run
 
 
-def test_any_saved_hardware_result_is_labelled_as_hardware():
-    # These files appear only after a real run. If one is present, it must say it is hardware.
-    if hw.RESULT_JSON.exists():
-        report = json.loads(hw.RESULT_JSON.read_text(encoding="utf-8"))
-        assert report["kind"] == "hardware" and report["job_id"]
+def test_saved_hardware_result_is_real_and_matches_its_raw_counts():
+    # The README and notebook tests check their numbers against this JSON. This checks the JSON
+    # itself against its raw counts, so every published rate traces back to actual shots.
+    report = json.loads(hw.RESULT_JSON.read_text(encoding="utf-8"))
+    marker = json.loads(script.JOB_FILE.read_text(encoding="utf-8"))
+    assert report["kind"] == "hardware" and report["job_id"]
+    assert marker["status"] == "done"
+    assert (marker["job_id"], marker["backend"]) == (report["job_id"], report["backend"])
+
+    hg, _, uniform = hw.load_problem()
+    assert report["qubit_order"] == list(hg.nodes)  # otherwise the bits would score the wrong gates
+    assert report["uniform_guessing"] == uniform
+    for counts, saved in ((report["counts"], report["measured"]), (report["aer_counts"], report["aer"])):
+        assert sum(counts.values()) == hw.SHOTS
+        assert hw.shot_stats(hg, counts, report["proven_best_cut"]) == saved

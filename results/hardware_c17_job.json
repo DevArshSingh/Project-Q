@@ -1,0 +1,78 @@
+{
+  "status": "done",
+  "job_id": "dbmpb01kbkrc73cpvqv0",
+  "backend": "ibm_marrakesh",
+  "submitted_at": "2026-11-06T08:53:20.305990+00:00",
+  "transpile": {
+    "optimization_level": 3,
+    "selection": "fewest two-qubit gates, then lowest depth, then lowest seed",
+    "chosen_seed": 1,
+    "chosen": {
+      "depth": 135,
+      "two_qubit_gates": 50,
+      "two_qubit_depth": 38
+    },
+    "all_seeds": [
+      {
+        "seed": 0,
+        "depth": 167,
+        "two_qubit_gates": 57,
+        "two_qubit_depth": 48
+      },
+      {
+        "seed": 1,
+        "depth": 135,
+        "two_qubit_gates": 50,
+        "two_qubit_depth": 38
+      },
+      {
+        "seed": 2,
+        "depth": 126,
+        "two_qubit_gates": 52,
+        "two_qubit_depth": 37
+      },
+      {
+        "seed": 3,
+        "depth": 150,
+        "two_qubit_gates": 55,
+        "two_qubit_depth": 43
+      },
+      {
+        "seed": 4,
+        "depth": 135,
+        "two_qubit_gates": 50,
+        "two_qubit_depth": 38
+      },
+      {
+        "seed": 5,
+        "depth": 137,
+        "two_qubit_gates": 50,
+        "two_qubit_depth": 38
+      },
+      {
+        "seed": 6,
+        "depth": 126,
+        "two_qubit_gates": 52,
+        "two_qubit_depth": 37
+      },
+      {
+        "seed": 7,
+        "depth": 137,
+        "two_qubit_gates": 50,
+        "two_qubit_depth": 37
+      },
+      {
+        "seed": 8,
+        "depth": 137,
+        "two_qubit_gates": 50,
+        "two_qubit_depth": 37
+      },
+      {
+        "seed": 9,
+        "depth": 137,
+        "two_qubit_gates": 50,
+        "two_qubit_depth": 38
+      }
+    ]
+  }
+}
