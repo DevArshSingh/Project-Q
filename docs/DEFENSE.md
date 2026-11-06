@@ -369,4 +369,3 @@ On FakeFez, 2-qubit gate counts across seeds 0–9 ranged from 50 to 57, and dep
 - **The executed copy can go stale.** A test confirms its cells match the builder, but not that its outputs are from the current code or results. Re-run `python scripts/build_notebook.py --execute` after any change.
 - **Pins cover direct dependencies only**, and only Python 3.12 on Linux has been tried. `requirements-optional.txt` stays unpinned because a test expects the plain line `kahypar`. KaHyPar results were produced with 1.3.7.
 - **The hardware run is still pending.** The README and notebook say no job has been run, and they must be updated if it happens. A test reminds us: it requires that sentence only while `results/hardware_c17.json` doesn't exist.
-- **SPEC and BUILD_PLAN still say `notebooks/demo.ipynb`.** The real file is `notebooks/project_q.ipynb`, as in the Notebook rule.

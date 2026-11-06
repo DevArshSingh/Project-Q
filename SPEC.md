@@ -61,7 +61,7 @@ c17 (6 NAND gates, 5 nets, expected best balanced cut = 2, unique optimum {g10,g
 ```
 project_q/  parse_yosys.py coarsen.py qubo.py solvers.py scorecard.py cli.py
 benchmarks/  c17.v c432.v c880.v ...
-notebooks/demo.ipynb
+notebooks/project_q.ipynb
 tests/
 docs/
 requirements.txt

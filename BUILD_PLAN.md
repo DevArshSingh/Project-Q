@@ -108,7 +108,7 @@ Budget: ~10 minutes of QPU time TOTAL, so do exactly one small job after everyth
 6. Do not re-run to get a "better" result. Keep leftover minutes in reserve.
 
 ## Phase 9: Demo + README
-- `notebooks/demo.ipynb`: runs c17 end to end (Verilog → netlist → hypergraph → QUBO → QAOA → scorecard) with short explanations.
+- `notebooks/project_q.ipynb`: runs c17 end to end (Verilog → netlist → hypergraph → QUBO → QAOA → scorecard) with short explanations.
 - `README.md`: what it is, install steps (Yosys, venv), 3 example commands, results table, honest limitations (qubit limit, pair approximation, classical wins today, hardware run is a single noisy proof run), and how it relates to QOBLIB.
 - Pin versions in `requirements.txt` from `pip freeze` for the packages used.
 - **Done when:** a fresh clone can follow the README and reproduce the c17 run.
@@ -119,5 +119,5 @@ Budget: ~10 minutes of QPU time TOTAL, so do exactly one small job after everyth
 - [ ] Ablation chart, λ sweep plot, partition picture
 - [ ] One hardware run reported honestly
 - [ ] Routing demo (stretch)
-- [ ] README + demo notebook
+- [ ] README + `notebooks/project_q.ipynb`
 - [ ] No tokens or secrets in git history
