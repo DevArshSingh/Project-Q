@@ -6,3 +6,5 @@ results/*.token
 .ipynb_checkpoints/
 *.egg-info/
 .pytest_cache/
+results/dryrun/
+plots/dryrun/
