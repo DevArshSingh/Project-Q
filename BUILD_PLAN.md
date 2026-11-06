@@ -36,12 +36,12 @@ Cut order if behind: routing (Phase 7, never start), c880, p=2, extra λ values,
 ## Owners
 | Phase | Owner |
 |---|---|
-| 0 Environment, 1 Parser, 2 QUBO | Dev Arsh Singh |
+| 0 Environment, 1 Parser, 2 QUBO | Dev Arsh |
 | 3 QAOA, 4 CLI | Shrugal |
 | 5 Coarsening, 8 Hardware | Prisha |
 | 6 Benchmarks, 9 Notebook + README | Moath |
 | 7 Routing | Not built (stretch goal) |
-| Review, audit, final polish | Dev Arsh Singh |
+| Review, audit, final polish | Dev Arsh |
 
 ---
 
