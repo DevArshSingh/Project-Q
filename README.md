@@ -22,7 +22,7 @@ uv pip install -r requirements.txt
 uv pip install -e .
 ```
 
-- **Yosys is optional for the notebook.** The notebook loads the committed netlists in `benchmarks/netlists/`. You need Yosys only to synthesize `.v` files (including the commands below and `python scripts/export_netlists.py`) and for the full test suite.
+- **Yosys is optional for the notebook.** The notebook loads the committed netlists in `benchmarks/netlists/`. You need Yosys only to synthesize new `.v` files, to run `python scripts/export_netlists.py`, and for the full test suite: without it, `pytest` reports failures and errors in the tests that need it (9 failed, 17 errors when we checked).
 - Install Yosys with `sudo apt install yosys` on Linux. **On Windows, use WSL** (Ubuntu) and install it there.
 - **KaHyPar is optional.** To add this classical baseline, run `uv pip install -r requirements-optional.txt`. Without it, `--solver kahypar` runs Kernighan–Lin and labels the result `kl-fallback`, so its cuts can be worse than KaHyPar's.
 - **No IBM account or token is needed** for anything in the commands, notebook or tests.
@@ -39,11 +39,11 @@ python -m project_q.cli partition benchmarks/c17.v --solver qaoa
 python -m project_q.cli benchmark benchmarks/c17.v
 
 # 3. Split c432 (187 gates): too big for QAOA directly, so it's coarsened to 12 nodes,
-#    solved, then refined with FM. Takes about 20 s.
+#    solved, then refined with FM. Takes 20–30 s.
 python -m project_q.cli partition benchmarks/c432.v --solver qaoa --target 12
 ```
 
-Without Yosys, use the committed netlist instead of the Verilog file, for example `benchmarks/netlists/c17.json`.
+Without Yosys, these commands fall back to the committed netlist in `benchmarks/netlists/`.
 
 Expect cut 2 and a balanced split on c17, which is the proven optimum. Each run writes a JSON record to `results/`; use `--results-dir` to send it elsewhere.
 

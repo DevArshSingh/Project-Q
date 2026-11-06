@@ -109,7 +109,7 @@ We make no claim of quantum advantage anywhere.
 - Each run saves one JSON file, called a record: the cut, how far it is from the best known cut (the gap), whether it's balanced, and the runtime.
 - A solver can't mark its own work. The record recomputes the cut from the final split, using the same `true_cut` for every solver.
 - We added two larger circuits, c432 (187 gates) and c880 (480 gates). QAOA can't run on them yet because they need far more than our 24-qubit limit.
-- We also added KaHyPar, an industry-grade classical partitioner, as the strongest baseline.
+- We also added KaHyPar, a state-of-the-art classical partitioner, as the strongest baseline.
 
 **Historical: results from `benchmark` at this phase (seed 0).** `benchmark` now also runs the multilevel pipeline, so today's output has different rows. Phase 6 is the real table.
 
@@ -248,7 +248,7 @@ The 12-supernode rows use 10 seeds, the 20-supernode rows use 3, and flat c432 a
 - **QAOA's coarse answers depend on size.** At 12 qubits, its best shot equals brute force's coarse cut in 20 of 20 runs. As Phase 5 showed, 4000 shots nearly cover 4096 states, so that says little. At 20 qubits, where 4000 shots can't cover about a million states, it matched in 0 of 6 runs and none of its shots were optimal (coarse cut 19 vs 12–13 on c432, 42–45 vs 37–41 on c880).
 - **Classical tools are ahead.** On c432 at 12 supernodes, simulated annealing+FM has the same final cuts as QAOA+FM on all 10 seeds, in 0.04 s instead of 17.9 s. KaHyPar on its own is as good as or better than every multilevel row's mean on both designs, in 0.03 s or less.
 
-**The λ rule (`suggest_lambda` in `project_q/qubo.py`).** λ = d̄ / (δ_out² − δ_min²), where d̄ is the average number of nets per node, δ_min is the smallest possible imbalance, and δ_out is the first imbalance the balance rule rejects. So going from the most even split to the first illegal one costs about as much as the wires on a typical node. It uses only the circuit and ε. On c17 it gives exactly 2.0, so Gate 1 and the Phase 8 angles don't change. `multilevel` and the CLI use it by default on the coarse circuit, and `--lam` overrides it.
+**The λ rule (`suggest_lambda` in `project_q/qubo.py`).** λ = d̄ / (δ_out² − δ_min²), where d̄ is the average number of nets per node (counting only nets of 8 nodes or fewer, the ones the QUBO can see), δ_min is the smallest possible imbalance, and δ_out is the first imbalance the balance rule rejects. So going from the most even split to the first illegal one costs about as much as the wires on a typical node. It uses only the circuit and ε. On c17 it gives exactly 2.0, so Gate 1 and the Phase 8 angles don't change. `multilevel` and the CLI use it by default on the coarse circuit, and `--lam` overrides it.
 
 | Lowest-energy state is the true best split | Rule | Fixed λ = 2.0 |
 |---|---|---|

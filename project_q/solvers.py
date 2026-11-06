@@ -331,7 +331,7 @@ def kernighan_lin(
 def kahypar_solver(
     hg: Hypergraph, qubo: QUBO | None = None, eps: float = DEFAULT_EPS, seed: int = 0
 ) -> SolverResult:
-    """KaHyPar, an industry-grade hypergraph partitioner: the strongest classical baseline here.
+    """KaHyPar, a state-of-the-art hypergraph partitioner: the strongest classical baseline here.
 
     Unlike Kernighan-Lin it works on real nets instead of pairs, and it respects node
     weights. It is optional (SPEC): if it isn't installed we run Kernighan-Lin instead
