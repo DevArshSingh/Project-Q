@@ -30,7 +30,7 @@ A: N3 feeds two gates. If those gates land on different chips, the N3 signal has
 A: On c17 we check every one of the 64 possible assignments. The QUBO's cut energy equals the true cut on all 64, and brute force shows the lowest-energy state is exactly the best balanced split (cut 2), with an energy gap of 1.0 to the next state. Every solver's final answer is re-scored by plain-Python `true_cut`, never by the QUBO energy.
 
 **Q: Why λ = 2.0 for the balance penalty?**
-A: λ trades cut against balance. On c17 the best lopsided split sits only 1.0 above the optimum at λ = 1, but 2.0 above it at λ = 2. That makes a noisy solver less likely to drift to an unbalanced answer, while the cut terms still decide among balanced splits. We chose it on c17 only, and it fails on some larger designs, so Phase 6 adds a rule that computes λ from the circuit. That rule also gives 2.0 on c17.
+A: λ trades cut against balance. On c17 the best lopsided split sits only 1.0 above the optimum at λ = 1, but 2.0 above it at λ = 2. That widens the energy margin against unbalanced answers, while the cut terms still decide among balanced splits. It's an energy argument, not a sampling result: in our sweep on c17, QAOA gave more balanced shots at λ = 1 (68.6%) than at λ = 2 (63.2%), and more optimal shots at λ = 3 (19.2% vs 9.8%). We chose it on c17 only, and it fails on some larger designs, so Phase 6 adds a rule that computes λ from the circuit. That rule also gives 2.0 on c17.
 
 ---
 
