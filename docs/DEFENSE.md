@@ -163,7 +163,7 @@ KaHyPar takes about 0.05 s or less per run on these designs, and classical solve
 **Verdict.**
 - **Tier 1 (the SPEC's check) passed:** QAOA's best shot equalled brute force in 15 of 15 runs.
 - **Tier 2 (better than guessing) passed on 2 of 3 instances:** we fixed the test before running it: optimal and balanced rates both above guessing at p < 0.01. Seed 2 missed on optimal rate, at p = 0.012, and we did not move the threshold. At p=2 all 3 instances passed, but p=2 was not the setting chosen in advance.
-- **What that means:** QAOA learned to produce balanced splits, but not lower cuts. The last column shows no real gain once a shot is balanced, and the mean cut of balanced shots is about the same as guessing (28.1 vs 28.2, 27.3 vs 27.5, 26.3 vs 26.4). So Gate 2 passed as written, with no evidence yet that QAOA finds better cuts than random sampling.
+- **What that means:** The tuned circuit produces more balanced splits, but not lower cuts. The last column shows no real gain once a shot is balanced, and the mean cut of balanced shots is about the same as guessing (28.1 vs 28.2, 27.3 vs 27.5, 26.3 vs 26.4). So Gate 2 passed as written, with no evidence yet that QAOA finds better cuts than random sampling.
 - **Decision:** the team accepted Gate 2 as passed as written, with the limit that QAOA isn't shown to beat random guessing at this size.
 
 **First look at the full c432 (coarsening seeds 0, 1, 2; target 12; λ = 2.0).**

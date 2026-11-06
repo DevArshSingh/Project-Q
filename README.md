@@ -75,7 +75,7 @@ Seeds: 5 on c17 (brute force runs once), 10 on flat c432 and c880 rows and at 12
 - **Classical wins.** KaHyPar alone beats or ties every multilevel mean, in 0.03 s or less.
 - **FM does most of the work.** By a rule fixed before running, random+FM matches QAOA+FM at 12 supernodes on both designs: 13.5 vs 11.5 on c432 (sign test p = 0.289) and 25.0 vs 26.2 on c880 (p = 0.219). "Matches" means no clear difference was found, not that they are proven equal. See [`results/ablation_verdict.txt`](results/ablation_verdict.txt) and [`plots/ablation.png`](plots/ablation.png).
 - **On c432 at 12 supernodes, simulated annealing+FM gets the same final cut as QAOA+FM on all 10 seeds**, in 0.04 s instead of 17.93 s.
-- **On small problems, QAOA learned balance, not better cuts.** On c17 it gave more balanced and optimal shots than uniform guessing (63.2% vs 31.25%, and 9.8% vs 3.125%). On coarsened c432 it gave more balanced shots than guessing, but among balanced shots it hit the optimum about as often as guessing did.
+- **On small problems, tuned QAOA favours balance, not better cuts.** On c17 it gave more balanced and optimal shots than uniform guessing (63.2% vs 31.25%, and 9.8% vs 3.125%). On coarsened c432 it gave more balanced shots than guessing, but among balanced shots it hit the optimum about as often as guessing did.
 
 More plots: [`plots/lambda_sweep.png`](plots/lambda_sweep.png) and [`plots/partition_c17.png`](plots/partition_c17.png).
 
