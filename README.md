@@ -88,7 +88,7 @@ More plots: [`plots/lambda_sweep.png`](plots/lambda_sweep.png) and [`plots/parti
 - **Hardware has not been run.** Every result here is from the noise-free Aer simulator, and real hardware could be much worse. `scripts/hardware_c17.py` is built for one small IBM run on c17, but so far it has only been tested locally, against stubs and a simulated noise model. No job has been sent to IBM, and even a good result on 6 qubits wouldn't say anything about larger circuits.
 - **Thin evidence.** Two larger circuits, p=1 in the benchmarks, 3 seeds at 20 supernodes, and no correction for multiple comparisons. Solvers weren't tuned, and QAOA's best of 4000 checked shots is compared with random's single split, which favours QAOA.
 - **Benchmarks aren't the original ISCAS-85 files.** They were re-synthesized twice, so cuts can't be compared directly with published results. See [`benchmarks/SOURCES.md`](benchmarks/SOURCES.md).
-- **Scope.** Two-way splits only. Only combinational benchmarks have been tested. Wire routing (our stretch goal) wasn't built.
+- **Scope.** Two-way splits only. Only combinational benchmarks have been tested. Wire routing: not built (stretch goal).
 - **Licensing is unresolved.** This repository has no license yet. The optional KaHyPar config is GPLv3+, and the benchmark source repository lists no license, so check both before redistributing.
 
 The full list, including how we know each result is correct, is in [`docs/DEFENSE.md`](docs/DEFENSE.md).

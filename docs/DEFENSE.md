@@ -288,6 +288,12 @@ On the 23 held-out instances (`results/lambda_rule.csv`), the rule's lowest-ener
 
 ---
 
+## Phase 7: Routing
+
+Not built (stretch goal). Nothing in the code, results or notebook depends on it, and we make no routing claims.
+
+---
+
 ## Phase 8: The single IBM hardware run
 
 **Status: the script is built and tested, and the hardware run has not happened yet.** No job has been sent to IBM, so there are no hardware numbers below. `results/hardware_c17.json` and `plots/hardware_vs_aer.png` will exist only after the real run.

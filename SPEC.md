@@ -13,7 +13,7 @@ Hardware engineers who know Verilog but not quantum.
 
 ## Scope
 **Core (must work):** Verilog → partition (k=2) via QAOA → scorecard.
-**Stretch (only after Gate 2):** 2-pin routing on a ~6×6 grid, choose 1 of 3–4 candidate paths per wire (one qubit per wire-path pair, ≤20 qubits).
+**Stretch, not built:** 2-pin routing on a ~6×6 grid, choose 1 of 3–4 candidate paths per wire (one qubit per wire-path pair, ≤20 qubits).
 **Hardware:** ONE small validation run on IBM hardware (user has ~10 min of free QPU time total). All development and results on Aer; hardware run is a single proof run, see `BUILD_PLAN.md` Phase 8.
 **Out of scope:** full Steiner tree packing, k>2, multi-layer routing.
 
@@ -48,7 +48,7 @@ c17 (6 NAND gates, 5 nets, expected best balanced cut = 2, unique optimum {g10,g
 - Ablation chart: QAOA vs random vs SA at the coarsest level (is FM doing the work?)
 - λ sweep plot (cut vs balance)
 - Picture of partitioned circuit
-- Routing demo (stretch)
+- Routing demo: not built (stretch goal)
 - 3-minute pitch + backup video
 
 ## Rules for the build

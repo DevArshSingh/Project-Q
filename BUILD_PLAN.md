@@ -93,7 +93,9 @@ Cut order if behind: routing (Phase 7, never start), c880, p=2, extra λ values,
 - Define a λ rule that doesn't rely on brute force, and show the ablation.
 - **Done when:** all three plots + `summary.csv` exist and the numbers come from real runs.
 
-## Phase 7: Stretch: routing (ONLY if Gates 1 and 2 passed and user says go)
+## Phase 7: Stretch: routing: not built (stretch goal)
+
+Intentionally not built. The original condition was: only if Gates 1 and 2 passed and the user says go.
 - 6×6 grid, 4–5 two-pin wires, 3–4 classical candidate paths each (BFS/A* variants). QUBO per SPEC (length + one-hot penalty A + conflict penalty B, with A,B > any length saving). ≤ 20 qubits.
 - Solve with brute force, SA, QAOA on Aer. Draw the routed grid.
 - **Done when:** QAOA result is valid (no collisions, one path per wire) and compared to brute force. Label it a simplified 2-pin version of QOBLIB's routing class.
@@ -118,6 +120,6 @@ Budget: ~10 minutes of QPU time TOTAL, so do exactly one small job after everyth
 - [ ] Results table (all solvers × c17, c432, c880)
 - [ ] Ablation chart, λ sweep plot, partition picture
 - [ ] One hardware run reported honestly
-- [ ] Routing demo (stretch)
+- [ ] Routing demo: not built (stretch goal)
 - [ ] README + `notebooks/project_q.ipynb`
 - [ ] No tokens or secrets in git history
