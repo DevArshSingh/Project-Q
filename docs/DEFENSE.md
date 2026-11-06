@@ -13,7 +13,7 @@ We make no claim of quantum advantage anywhere.
 **Why it works.** The smoke tests check the Python version, every import, that Yosys runs, and that the CLI help prints. Versions in use: qiskit 2.6.1, qiskit-aer 0.18.2, qiskit-ibm-runtime 0.51.0, qiskit-addon-opt-mapper 0.1.0, Yosys 0.52.
 
 **Where it falls short.**
-- Dependencies are not pinned yet (planned for Phase 9), so a fresh install could pull newer, incompatible versions.
+- Phase 9 pins direct dependencies only. Indirect ones aren't pinned, so a fresh install could still pull newer, incompatible versions of those.
 - opt-mapper is at version 0.1.0, very new. From Phase 3 we use it to build the Hamiltonian, and tests check its output (see Phase 3).
 - Yosys is a system install, and we don't check its version.
 
@@ -190,7 +190,6 @@ KaHyPar takes about 0.05 s or less per run on these designs, and classical solve
 - **The statistics are simple.** The test pools shots across seeds, and it isn't corrected for running many settings.
 - **Small test size.** We ran 3 instances of one circuit at 12 qubits. 20 qubits hasn't been timed. The 1.5× weight cap is our own choice, not tuned or taken from the literature.
 - **Noise-free simulator only.** Hardware results could be much worse.
-- **The notebook has no Phase 5 or Phase 6 section yet.** It's updated separately.
 
 ### Known limitations
 
@@ -286,7 +285,6 @@ On the 23 held-out instances (`results/lambda_rule.csv`), the rule's lowest-ener
 - **`p_optimal` means the coarse level** on multilevel rows, not the full circuit.
 - **Best known cuts on c432 and c880 are only the best in this file**, labelled `best_of_this_run`.
 - **Limits that remain.** p=1 only, simulator only, two circuits, and netlists re-synthesized as described under Phase 4. FM on c17 is still stuck (Known limitation 2), so c17 stays flat. Brute force on 21–24 node designs is still refused.
-- **The notebook has no Phase 6 section yet.** It's updated separately.
 
 ---
 
@@ -341,6 +339,34 @@ On FakeFez, 2-qubit gate counts across seeds 0–9 ranged from 50 to 57, and dep
 - **Raw shots only.** We apply no error mitigation, so the result shows the chip's plain noise, not the best it could do.
 - **The time figure is rough.** About 1 s on the qubits, from shots × (reset delay + circuit time). Billed usage adds overhead we can't measure offline. IBM cancels the job at the script's 120 s limit.
 - **"One run" is enforced by a local file.** `results/hardware_c17_job.json` blocks a second `--submit`, but only in that copy of the repo, and deleting it removes the block. Commit it after the run so teammates' copies are blocked too. The rule still depends on us following it.
-- **`SamplerV2` is deprecated** in qiskit-ibm-runtime 0.51, though it still works in that version. We kept it on purpose, and the versions need pinning in Phase 9 so a newer release can't remove it before the run.
+- **`SamplerV2` is deprecated** in qiskit-ibm-runtime 0.51, though it still works in that version. We kept it on purpose, and Phase 9 pins the version so a newer release can't remove it before the run.
 - **c17 is tiny.** Even a good result says nothing about larger circuits, and it wouldn't show quantum beating classical: brute force solves c17 instantly.
 - **The notebook has no Phase 8 section yet.** It's updated separately.
+
+---
+
+## Phase 9: Notebook, README and pinned versions
+
+**In plain words.**
+- The notebook now covers Phases 3–6 and ends with a limitations section. It's the required submission.
+- It runs the quick steps live, such as QAOA on c17 and one c432 run. It reads the slow results from `results/` and `plots/` instead of repeating 42 minutes of runs.
+- `project_q_executed.ipynb` is the same notebook with its outputs saved, so judges can read it without running anything.
+- The README covers install steps, three commands, the results table, limitations, how we relate to QOBLIB, and the fact that we used AI assistance.
+- `requirements.txt` now pins the exact versions we used.
+- No IBM hardware job was run. Everything still comes from the Aer simulator.
+
+**Why it works.**
+- **Notebook numbers come from the files.** Result tables are computed from the CSVs when the notebook runs, and the ablation verdicts are recomputed and compared with the saved text.
+- **A live run matches the saved one.** The c432 QAOA+FM run at seed 0 produces exactly the split saved in `summary.csv`, and the notebook test checks that.
+- **README numbers are checked.** A test recomputes every cut and runtime in the README table from `summary.csv`.
+- **No Yosys needed.** The test runs the notebook with Yosys hidden from `PATH`.
+- **Fresh-install bug fixed.** The notebook used to import `project_q` only because our `.venv` had it installed, so a new install would have failed. It now finds the package itself. We checked this on a fresh copy with a new environment built from the pinned versions.
+- **Wording checks.** A test requires the README and notebook to state that we don't claim quantum beats classical, and to mention that claim only to deny it. It also rejects token-like strings and IBM submission code in them.
+
+**Where it falls short.**
+- **Some notebook numbers are quoted, not computed.** The p=2 and Gate 2 tables aren't in `results/`. They're copied from this file, and the notebook names the scripts that reproduce them. No test checks those copies.
+- **The prose can go stale.** Numbers in the notebook's markdown and in the README's bullets aren't all checked by tests, only the README table is. If results change, they need updating by hand.
+- **The executed copy can go stale.** A test confirms its cells match the builder, but not that its outputs are from the current code or results. Re-run `python scripts/build_notebook.py --execute` after any change.
+- **Pins cover direct dependencies only**, and only Python 3.12 on Linux has been tried. `requirements-optional.txt` stays unpinned because a test expects the plain line `kahypar`. KaHyPar results were produced with 1.3.7.
+- **The hardware run is still pending.** The README and notebook say no job has been run, and they must be updated if it happens. A test reminds us: it requires that sentence only while `results/hardware_c17.json` doesn't exist.
+- **SPEC and BUILD_PLAN still say `notebooks/demo.ipynb`.** The real file is `notebooks/project_q.ipynb`, as in the Notebook rule.

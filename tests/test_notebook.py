@@ -1,6 +1,7 @@
 """The notebook deliverable: up to date, well-formed, and runs top to bottom without Yosys."""
 
 import importlib.util
+import re
 import sys
 from pathlib import Path
 
@@ -44,6 +45,42 @@ def test_notebook_runs_without_yosys(monkeypatch):
     assert "64/64" in text
     assert "λ = 2.0: best balanced cut 2, lowest-energy state is optimal: True, ΔE = 1.0" in text
     assert "20 balanced splits" in text
+    # Phases 3-6: live cells agree with brute force and the saved results, and the saved verdicts appear.
+    assert "Hamiltonian energy == QUBO energy on 64/64 basis states" in text
+    assert "solver reported cut 0; scorecard recorded cut 2" in text
+    assert "Live QAOA+FM split matches the saved seed 0 row (cut 12): True" in text
+    assert "Random+FM matches QAOA+FM" in text
+    assert "Recomputed verdicts match results/ablation_verdict.txt: True" in text
+    assert "at 20 qubits: 0 of 6 runs" in text
+    assert re.search(r"Held out: all\s+11/23\s+8/23", text)
+    assert sum("image/png" in o.get("data", {}) for c in nb.cells if c.cell_type == "code" for o in c.outputs) == 3
+
+
+def test_limitations_section_is_honest():
+    limits = next(c.source for c in _builder().build().cells if c.source.startswith("## 8. Limitations"))
+    for phrase in (
+        "no claim of quantum advantage",
+        "Classical tools win at this size",
+        "λ = 2.0 doesn't suit weighted supernodes",  # the 3 Known limitations in docs/DEFENSE.md
+        "FM can get stuck when balance is tight",
+        "The CLI didn't use multilevel",
+        "No IBM hardware job has been run",
+    ):
+        assert phrase in limits, phrase
+
+
+def test_executed_copy_matches_builder_and_has_outputs():
+    # The copy judges read. Same cells as the builder, so it can't silently go stale.
+    executed = nbformat.read(NOTEBOOK.with_name("project_q_executed.ipynb"), as_version=4).cells
+    built = _builder().build().cells
+    assert [c.source for c in executed] == [c.source for c in built], "run: python scripts/build_notebook.py --execute"
+    for cell in executed:
+        if cell.cell_type == "code":
+            assert cell.outputs, f"code cell {cell.id} has no output"
+            for output in cell.outputs:
+                assert output.output_type != "error", cell.id
+                text = str(output.get("text", "")) + str(output.get("data", {}).get("text/plain", ""))
+                assert "/home/" not in text and str(ROOT) not in text, f"absolute path in {cell.id}"
 
 
 if __name__ == "__main__":
