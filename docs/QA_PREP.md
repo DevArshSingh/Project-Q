@@ -83,3 +83,13 @@ A: Only that the circuit our pipeline builds from Verilog can run on a real chip
 
 **Q: What if noise dominates? And why did you try 10 transpile seeds if you won't re-run?**
 A: If noise dominates, we report that. The balanced and optimal rates would fall toward guessing, and that's a real result about running this circuit on today's hardware. We get one run: the script records the job before sending it and refuses a second `--submit`, because re-running until the numbers look good would be picking the result we like. The 10 seeds are different. They only compare circuit sizes before any shots are taken, and they use no QPU time, so they can't favour a good-looking answer. We keep the version with the fewest 2-qubit gates and log all 10 in the results.
+
+---
+
+## Phase 9: Notebook and README
+
+**Q: Are the notebook's results real? Can I reproduce them?**
+A: Yes. Result tables are computed from `results/summary.csv` when the notebook runs, and a test recomputes the README table from the same file. The notebook also repeats a c432 QAOA+FM run live and checks that it gives exactly the saved split. It doesn't need Yosys or an IBM account. Versions are pinned, and we tested a fresh install on a clean copy. The exceptions are the p=2 and Gate 2 tables, which are quoted from `docs/DEFENSE.md`, with the scripts that reproduce them named. Everything is from the noise-free Aer simulator.
+
+**Q: Your own README says classical wins. So what did you actually build?**
+A: A working bridge and an honest way to measure it. A hardware engineer can give it Verilog and get a quantum-ready optimization problem, along with a score that uses the same classical rule for QAOA and classical solvers. Today KaHyPar beats or ties every multilevel mean, in 0.03 s or less, and random+FM matches QAOA+FM by a rule we fixed before running. We don't claim quantum beats classical. Our tool lets anyone re-run this comparison as quantum solvers change, and it's built in the same spirit as QOBLIB, though it isn't a QOBLIB submission.
