@@ -296,7 +296,22 @@ Not built (stretch goal). Nothing in the code, results or notebook depends on it
 
 ## Phase 8: The single IBM hardware run
 
-**Status: the script is built and tested, and the hardware run has not happened yet.** No job has been sent to IBM, so there are no hardware numbers below. `results/hardware_c17.json` and `plots/hardware_vs_aer.png` will exist only after the real run.
+**Status: done, once.** Job `dbmpb01kbkrc73cpvqv0` ran on `ibm_marrakesh`: c17, 6 qubits, p=1, 4000 shots, γ = 0.2286, β = −0.2621, λ = 2.0, raw shots with no error mitigation. We didn't re-run it. The results are in `results/hardware_c17.json`, the job marker in `results/hardware_c17_job.json`, and the plot in `plots/hardware_vs_aer.png`.
+
+**The result.** Each rate is re-scored from the raw counts with `true_cut` and `is_balanced`.
+
+| | Balanced shots | Optimal shots | Best balanced cut |
+|---|---|---|---|
+| `ibm_marrakesh`, 4000 raw shots | 60.275% | 8.5% | 2 |
+| Aer, no noise, same angles, 4000 shots | 68.65% | 10.15% | 2 |
+| Uniform guessing | 31.25% | 3.125% | not run |
+
+**What the run shows.**
+- **Hardware vs guessing.** Balanced shots were 1.93× guessing and optimal shots 2.72× guessing. So the tuned circuit's preference for good splits was still visible through the noise, on this small circuit, in this run.
+- **Hardware vs Aer.** Balanced shots were 8.375 points lower, about 7.9 standard errors. Optimal shots were 1.65 points lower, about 2.5 standard errors, so that drop is much less clear. These standard errors cover shot noise only.
+- **Most of the lift is balance.** Among balanced shots, 14.1% were optimal on hardware, 14.8% on Aer and 10% for guessing (2 of the 20 balanced states).
+- **A visible sign of noise.** The optimal states `001110` and `110001` are mirror images of one split, and without noise they are equally likely. Hardware gave them 111 and 229 shots, a gap of about 6.4 standard errors. Aer gave 190 and 216, about 1.3. We haven't diagnosed the cause, and one run can't.
+- **Why Aer reads 68.65% here and 63.2% in the README.** The baseline here is seed 0's run at these fixed angles. The README's 63.2% balanced and 9.8% optimal are the 5-seed mean from the λ sweep, where seed 4's 43.625% balanced pulls the mean down. Seed 0's row in that sweep matches this baseline.
 
 **In plain words.**
 - We take the c17 QAOA circuit, with angles already tuned on the simulator, and measure it 4000 times on a real IBM quantum chip.
@@ -307,7 +322,7 @@ Not built (stretch goal). Nothing in the code, results or notebook depends on it
 - By default the script only simulates, with no token. It sends a job only with `--submit`, after showing the circuit size and time estimate and after you type `yes`.
 - It's one run, and we report it as it comes, even if noise dominates. We don't re-run it for a better result.
 
-**How to run it.**
+**How to run it.** This is the route the job took. Don't repeat it: a second `--submit` is refused.
 1. `python scripts/hardware_c17.py` is the dry run. It uses a local fake backend and writes to `results/dryrun/` and `plots/dryrun/`, which git ignores.
 2. Set `QISKIT_IBM_TOKEN` in the shell. The script reads the token from that variable only.
 3. `python scripts/hardware_c17.py --submit` connects, prints the estimate and waits for `yes`.
@@ -321,13 +336,14 @@ Not built (stretch goal). Nothing in the code, results or notebook depends on it
 | FakeFez, simulated noise (noise seed 1) | 61.55% | 8.43% | 2 |
 | Uniform guessing | 31.25% | 3.125% | not run |
 
-On FakeFez, 2-qubit gate counts across seeds 0–9 ranged from 50 to 57, and depth from 125 to 169. The script chose seed 7, with 50 gates and depth 134. A real backend will give its own numbers, which the script prints before asking.
+On FakeFez, 2-qubit gate counts across seeds 0–9 ranged from 50 to 57, and depth from 125 to 169. The script chose seed 7, with 50 gates and depth 134. On the real `ibm_marrakesh` they ranged from 50 to 57 and from 126 to 167, and the script chose seed 1, with 50 gates, depth 135 and 2-qubit depth 38.
 
 **Why it works.**
 - **Angles.** A test confirms that `qaoa()` on c17 still finds γ = 0.2286 and β = −0.2621, and that the energy at those angles is 4.026, the known p=1 minimum, on both versions of c17.
 - **Bit order.** Transpiling moves qubits around. Run without noise, the transpiled circuit matches the original's distribution (test limit: total variation distance below 0.05), so keys still map to the right gates.
 - **Choosing a seed is fair.** The comparison uses only circuit size and happens before any shots, so it can't favour a good-looking result. All 10 seeds are logged in the JSON.
 - **Scoring.** Tests check the rates on hand-counted shots: the mirror split counts as optimal, a cut-0 shot with every gate on one side doesn't, and if no shot is balanced the best cut is `null`.
+- **The saved result is checked.** A test re-scores the raw counts in the JSON and requires the same rates, and requires the job ID and backend to match the marker. Other tests require the README and the notebook's limitations cell to match the JSON.
 - **Safety.** With a stub service and every network connection blocked, tests check that:
   - only an exact `yes` submits
   - exactly one 4000-shot job runs, in Job mode
@@ -337,29 +353,28 @@ On FakeFez, 2-qubit gate counts across seeds 0–9 ranged from 50 to 57, and dep
 - **Offline dry run.** We also ran the dry run in a Linux network namespace with no network, with the token unset, and it finished normally.
 
 **Where it falls short.**
-- **The script has never talked to IBM.** All tests use stubs, so `--submit` first meets the real service on the actual run. An API mismatch would first show up then.
-- **Cut 2 will prove almost nothing.** With 4000 uniform random shots on 64 states, an optimal split almost surely appears. Pure noise could still report cut 2, so the balanced and optimal rates are the real measure.
-- **One run is one snapshot.** The standard errors in the JSON cover shot noise only (about ±0.7% on Aer's balanced rate). They say nothing about how the chip varies from day to day or qubit to qubit.
-- **The fake backend is not a forecast.** Its noise model is simple, so real hardware may well do worse than the dry run.
+- **The script's only contact with the real service was this job.** All tests use stubs, so `--submit` first met IBM on the actual run. It worked that once, which is not broad coverage of the API.
+- **Cut 2 proves almost nothing.** Hardware and Aer both found it, but with 4000 uniform random shots on 64 states, an optimal split almost surely appears. Pure noise could still report cut 2, so the balanced and optimal rates are the real measure.
+- **One run is one snapshot.** The standard errors in the JSON cover shot noise only (about ±0.8% on the hardware balanced rate). They say nothing about how the chip varies from day to day or qubit to qubit.
+- **The fake backend was not a forecast.** Its noise model is simple. The dry run landing near the hardware rates doesn't validate that model, because one run can't show that.
 - **Fewest gates isn't always the least noise.** The seed comparison counts gates and ignores how good the individual qubits are.
 - **Raw shots only.** We apply no error mitigation, so the result shows the chip's plain noise, not the best it could do.
-- **The time figure is rough.** About 1 s on the qubits, from shots × (reset delay + circuit time). Billed usage adds overhead we can't measure offline. IBM cancels the job at the script's 120 s limit.
-- **"One run" is enforced by a local file.** `results/hardware_c17_job.json` blocks a second `--submit`, but only in that copy of the repo, and deleting it removes the block. Commit it after the run so teammates' copies are blocked too. The rule still depends on us following it.
-- **`SamplerV2` is deprecated** in qiskit-ibm-runtime 0.51, though it still works in that version. We kept it on purpose, and Phase 9 pins the version so a newer release can't remove it before the run.
-- **c17 is tiny.** Even a good result says nothing about larger circuits, and it wouldn't show quantum beating classical: brute force solves c17 instantly.
-- **The notebook has no Phase 8 section yet.** It's updated separately.
+- **We have no measured QPU time.** Our estimate was about 1 s on the qubits, from shots × (reset delay + circuit time). The JSON's `usage_s` is `0`, which isn't believable for 4000 real shots, so we don't quote it. IBM's dashboard is the place to check actual usage. The script set a 120 s limit, past which IBM cancels the job.
+- **"One run" is enforced by a local file.** `results/hardware_c17_job.json` blocks a second `--submit`, and it's committed so teammates' copies are blocked too. Deleting it removes the block, so the rule still depends on us following it.
+- **`SamplerV2` is deprecated** in qiskit-ibm-runtime 0.51, though it worked for this run. We kept it on purpose, and Phase 9 pins the version.
+- **c17 is tiny.** This result says nothing about larger circuits, and it doesn't show quantum beating classical: brute force solves c17 instantly.
 
 ---
 
 ## Phase 9: Notebook, README and pinned versions
 
 **In plain words.**
-- The notebook now covers Phases 1–6 and ends with a limitations section. It's the required submission.
+- The notebook now covers Phases 1–6 and ends with a limitations section, which also reports the saved Phase 8 hardware run. It's the required submission.
 - It runs the quick steps live, such as QAOA on c17 and one c432 run. It reads the slow results from `results/` and `plots/` instead of repeating well over an hour of runs.
 - `project_q_executed.ipynb` is the same notebook with its outputs saved, so judges can read it without running anything.
 - The README covers install steps, three commands, the results table, limitations, how we relate to QOBLIB, and the fact that we used AI assistance.
 - `requirements.txt` now pins the exact versions we used.
-- No IBM hardware job was run. Everything still comes from the Aer simulator.
+- No IBM hardware job was run during this phase. The Phase 8 job came later, and the README and notebook report it from its saved file.
 
 **Why it works.**
 - **Notebook numbers come from the files.** Result tables are computed from the CSVs when the notebook runs, and the ablation verdicts are recomputed and compared with the saved text.
@@ -371,7 +386,7 @@ On FakeFez, 2-qubit gate counts across seeds 0–9 ranged from 50 to 57, and dep
 
 **Where it falls short.**
 - **Some notebook numbers are quoted, not computed.** The p=2 and Gate 2 tables aren't in `results/`. They're copied from this file, and the notebook names the scripts that reproduce them. No test checks those copies.
-- **The prose can go stale.** Numbers in the notebook's markdown and in the README's bullets aren't all checked by tests, only the README table is. If results change, they need updating by hand.
+- **The prose can go stale.** Numbers in the notebook's markdown and in the README's bullets aren't all checked by tests, only the README table, the README's hardware line and the notebook's hardware bullets are. If results change, the rest need updating by hand.
 - **The executed copy can go stale.** A test confirms its cells match the builder, but not that its outputs are from the current code or results. Re-run `python scripts/build_notebook.py --execute` after any change.
 - **Pins cover direct dependencies only**, and only Python 3.12 on Linux has been tried. `requirements-optional.txt` stays unpinned because a test expects the plain line `kahypar`. KaHyPar results were produced with 1.3.7.
-- **The hardware run is still pending.** The README and notebook say no job has been run, and they must be updated if it happens. A test reminds us: it requires that sentence only while `results/hardware_c17.json` doesn't exist.
+- **Hardware numbers in the docs aren't test-checked.** The numbers in this file and `docs/QA_PREP.md` were written by hand from `results/hardware_c17.json`, and no test compares them with it.

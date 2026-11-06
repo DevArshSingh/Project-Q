@@ -38,7 +38,7 @@ Cut order if behind: routing (Phase 7, never start), c880, p=2, extra λ values,
 |---|---|
 | 0 Environment, 1 Parser, 2 QUBO | Dev Arsh |
 | 3 QAOA, 4 CLI | Shrugal |
-| 5 Coarsening, 8 Hardware | Prisha |
+| 5 Coarsening, 8 Hardware script and dry run | Prisha |
 | 6 Benchmarks, 9 Notebook + README | Moath |
 | 7 Routing | Not built (stretch goal) |
 | Review, audit, final polish | Dev Arsh |
@@ -103,6 +103,8 @@ Intentionally not built. The original condition was: only if Gates 1 and 2 passe
 - **Done when:** QAOA result is valid (no collisions, one path per wire) and compared to brute force. Label it a simplified 2-pin version of QOBLIB's routing class.
 
 ## Phase 8: Single IBM hardware run (needs explicit user go-ahead)
+**Status: done, once.** Job `dbmpb01kbkrc73cpvqv0` on `ibm_marrakesh`, 4000 shots. Results are in `results/hardware_c17.json`. Do not run it again.
+
 Budget: ~10 minutes of QPU time TOTAL, so do exactly one small job after everything else works.
 1. Ask the user for confirmation and for the token to be set as `QISKIT_IBM_TOKEN` (never write it to a file in the repo). Check it with `QiskitRuntimeService` and list available backends sorted by least busy.
 2. Choose the c17 partition (6 qubits, p=1) with the optimal γ, β already found on Aer (at the default λ = 2.0). Do NOT optimize on hardware. Fixed parameters, one Sampler job.
@@ -121,7 +123,7 @@ Budget: ~10 minutes of QPU time TOTAL, so do exactly one small job after everyth
 - [x] `project-q partition design.v --solver qaoa` works
 - [x] Results table (all solvers × c17, c432, c880)
 - [x] Ablation chart, λ sweep plot, partition picture
-- [ ] One hardware run reported honestly
+- [x] One hardware run reported honestly
 - [ ] Routing demo: not built (stretch goal)
 - [x] README + `notebooks/project_q.ipynb`
 - [x] No tokens or secrets in git history

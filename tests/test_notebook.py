@@ -1,6 +1,7 @@
 """The notebook deliverable: up to date, well-formed, and runs top to bottom without Yosys."""
 
 import importlib.util
+import json
 import re
 import sys
 from pathlib import Path
@@ -53,7 +54,8 @@ def test_notebook_runs_without_yosys(monkeypatch):
     assert "Recomputed verdicts match results/ablation_verdict.txt: True" in text
     assert "at 20 qubits: 0 of 6 runs" in text
     assert re.search(r"Held out: all\s+11/23\s+8/23", text)
-    assert sum("image/png" in o.get("data", {}) for c in nb.cells if c.cell_type == "code" for o in c.outputs) == 3
+    assert "Recomputed from the raw counts, matches the saved rates: True" in text
+    assert sum("image/png" in o.get("data", {}) for c in nb.cells if c.cell_type == "code" for o in c.outputs) == 4
 
 
 def test_limitations_section_is_honest():
@@ -64,9 +66,27 @@ def test_limitations_section_is_honest():
         "λ = 2.0 doesn't suit weighted supernodes",  # the 3 Known limitations in docs/DEFENSE.md
         "FM can get stuck when balance is tight",
         "The CLI didn't use multilevel",
-        "No IBM hardware job has been run",
+        "One IBM hardware job has been run",
     ):
         assert phrase in limits, phrase
+    assert "No IBM hardware job has been run" not in limits
+
+
+def test_limitations_hardware_numbers_match_json():
+    limits = next(c.source for c in _builder().build().cells if c.source.startswith("## 8. Limitations"))
+    report = json.loads((ROOT / "results" / "hardware_c17.json").read_text(encoding="utf-8"))
+    assert report["job_id"] in limits and report["backend"] in limits
+    guessing = report["uniform_guessing"]
+    for rate in (
+        report["measured"]["feasible_rate"],
+        report["aer"]["feasible_rate"],
+        guessing["feasible_rate"],
+        report["measured"]["optimal_split_probability"],
+        report["aer"]["optimal_split_probability"],
+        guessing["optimal_split_probability"],
+    ):
+        percent = f"{100 * rate:.3f}".rstrip("0").rstrip(".") + "%"  # exact, no rounding: 0.085 -> 8.5%
+        assert re.search(rf"(?<![\d.]){re.escape(percent)}", limits), percent
 
 
 def test_executed_copy_matches_builder_and_has_outputs():

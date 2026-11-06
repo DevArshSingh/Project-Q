@@ -1,5 +1,6 @@
 """Phase 9: the README's numbers come from the real results, versions are pinned, and the wording stays honest."""
 
+import json
 import re
 from importlib.metadata import version
 from pathlib import Path
@@ -112,6 +113,28 @@ def test_no_tokens_or_ibm_submission_code(name):
     assert not re.search(r"\b[A-Za-z0-9_-]{40,}\b", text), "looks like a token"
 
 
-def test_readme_is_honest_about_hardware_while_no_run_exists():
-    if not (ROOT / "results" / "hardware_c17.json").exists():
-        assert "No job has been sent to IBM" in README
+def _percent(rate: float) -> str:
+    # The exact rate with no rounding, as the README writes it: 0.60275 -> 60.275%, 0.085 -> 8.5%.
+    return f"{100 * rate:.3f}".rstrip("0").rstrip(".") + "%"
+
+
+def test_readme_hardware_numbers_match_json():
+    # The README's one sentence about the real run must say what the saved run says.
+    report = json.loads((ROOT / "results" / "hardware_c17.json").read_text(encoding="utf-8"))
+    line = next(line for line in README.splitlines() if line.startswith("- **One hardware run"))
+    assert report["job_id"] in line and report["backend"] in line and f"{report['shots']} raw shots" in line
+    guessing = report["uniform_guessing"]
+    rates = [
+        (report["measured"]["feasible_rate"], report["aer"]["feasible_rate"], guessing["feasible_rate"]),
+        (
+            report["measured"]["optimal_split_probability"],
+            report["aer"]["optimal_split_probability"],
+            guessing["optimal_split_probability"],
+        ),
+    ]
+    for group in rates:
+        for rate in group:
+            # The lookbehind stops 8.5% from matching inside something like 68.5%.
+            assert re.search(rf"(?<![\d.]){re.escape(_percent(rate))}", line), _percent(rate)
+    for stale in ("Hardware has not been run", "No job has been sent to IBM"):
+        assert stale not in README, stale

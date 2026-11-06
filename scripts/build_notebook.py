@@ -398,10 +398,44 @@ Last, the partition picture: c17's proven-optimal split, with its 2 cut nets in 
 - **c17 proves very little.** It is tiny, and every solver except a single random split finds its optimum.
 
 **Hardware**
-- **Everything here ran on the noise-free Aer simulator.** Hardware results could be much worse.
-- **No IBM hardware job has been run.** `scripts/hardware_c17.py` is built and tested against stubs only, and this notebook contains no hardware numbers.
+- **The benchmark results here ran on the noise-free Aer simulator.** Only c17 has been on a real chip, and larger circuits could do much worse.
+- **One IBM hardware job has been run, and only one.** It ran c17 (6 qubits) on `ibm_marrakesh`, job `dbmpb01kbkrc73cpvqv0`, with 4000 raw shots, no error mitigation and fixed angles tuned on Aer.
+- **Balanced shots were 60.275% on hardware, 68.65% on Aer and 31.25% for uniform guessing. Optimal shots were 8.5%, 10.15% and 3.125%.** Hardware came in below Aer and above guessing on both.
+- **Finding cut 2 proves little.** 4000 random shots would almost surely find it too, so the rates are the measure.
+- **It's one snapshot of one chip.** Its standard errors cover shot noise only. It says nothing about larger circuits or about beating classical solvers: brute force solves c17 instantly."""),
+    ("md", """**The hardware run, read from its saved file.** This cell contacts nothing and needs no IBM account. It re-scores the saved raw counts with the same `true_cut` and `is_balanced` used above, checks them against the saved rates, and prints the comparison. In the plot, the triangles mark the two optimal states, which are mirror images of one split."""),
+    ("code", """import json
 
-**What we do claim:** a working bridge from Verilog to a quantum-ready optimization problem, and an honest scorecard that compares it with classical solvers using one classical scoring rule."""),
+run = json.loads((ROOT / "results" / "hardware_c17.json").read_text(encoding="utf-8"))
+assert run["kind"] == "hardware"
+assert list(hg.nodes) == run["qubit_order"]  # each bit of a shot means the same gate here as on the chip
+
+
+def shot_rates(counts):
+    \"\"\"Share of shots that are balanced, and share that are an optimal split. No QUBO energy involved.\"\"\"
+    balanced = optimal = 0
+    for key, n in counts.items():
+        bits = [int(c) for c in reversed(key)]  # Qiskit prints qubit 0 as the rightmost character
+        if is_balanced(hg, bits):
+            balanced += n
+            if true_cut(hg, bits) == run["proven_best_cut"]:
+                optimal += n
+    shots = sum(counts.values())
+    return balanced / shots, optimal / shots
+
+
+chip, aer = shot_rates(run["counts"]), shot_rates(run["aer_counts"])
+guess = run["uniform_guessing"]["feasible_rate"], run["uniform_guessing"]["optimal_split_probability"]
+saved = (run["measured"]["feasible_rate"], run["measured"]["optimal_split_probability"],
+         run["aer"]["feasible_rate"], run["aer"]["optimal_split_probability"])
+
+print(f"{run['backend']}, job {run['job_id']}, {run['shots']} shots, error mitigation: {run['error_mitigation']}")
+print(f"{'':<22}{'balanced':>10}{'optimal':>10}")
+for name, (bal, opt) in (("Hardware", chip), ("Aer, no noise", aer), ("Uniform guessing", guess)):
+    print(f"{name:<22}{bal:>10.3%}{opt:>10.3%}")
+print("Recomputed from the raw counts, matches the saved rates:", chip + aer == saved)
+display(Image(filename=str(ROOT / "plots" / "hardware_vs_aer.png")))"""),
+    ("md", """**What we do claim:** a working bridge from Verilog to a quantum-ready optimization problem, and an honest scorecard that compares it with classical solvers using one classical scoring rule."""),
 ]
 
 
