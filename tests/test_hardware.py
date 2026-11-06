@@ -258,12 +258,16 @@ def test_results_are_never_overwritten(problem, keys, tmp_path):
 
 
 @pytest.mark.parametrize("target", ["json", "png"])
-def test_dry_run_data_cannot_take_the_real_paths(problem, keys, tmp_path, target):
+def test_dry_run_data_cannot_take_the_real_paths(problem, keys, tmp_path, monkeypatch, target):
+    # Stand-in "real" paths: the true files exist after the IBM run, and this test must not depend on that.
+    real_json, real_png = tmp_path / "real.json", tmp_path / "real.png"
+    monkeypatch.setattr(hw, "RESULT_JSON", real_json)
+    monkeypatch.setattr(hw, "RESULT_PNG", real_png)
     report = _report(problem, keys, kind="dry_run", job_id=None)
-    paths = (hw.RESULT_JSON, tmp_path / "x.png") if target == "json" else (tmp_path / "x.json", hw.RESULT_PNG)
+    paths = (real_json, tmp_path / "x.png") if target == "json" else (tmp_path / "x.json", real_png)
     with pytest.raises(ValueError, match="dry run"):
         hw.write_report(report, *paths)
-    assert not hw.RESULT_JSON.exists() and not hw.RESULT_PNG.exists()
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_unknown_kind_is_refused(problem, keys):
