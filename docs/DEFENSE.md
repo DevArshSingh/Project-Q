@@ -34,7 +34,7 @@ We make no claim of quantum advantage anywhere.
 - Original gate and wire names are lost. Nodes are labelled by the wire they drive (e.g. `N22`, `new_n8`).
 - Nets touching more than 50 gates (clock/reset style) are dropped and are not counted in the cut at all.
 - Wires touching only one gate are dropped, including output pins, so the cost of I/O pins per chip is ignored.
-- Only tested on c17, a 6-gate, combinational (no flip-flops), single-module design. Sequential and multi-module designs are untested.
+- At this phase, only tested on c17, a 6-gate, combinational (no flip-flops), single-module design. Phase 4 adds c432 and c880, also combinational. Sequential and multi-module designs are still untested.
 
 ---
 
@@ -96,7 +96,7 @@ We make no claim of quantum advantage anywhere.
 - **Beating uniform guessing is a low bar.** We have not yet compared QAOA's sampling with simulated annealing's, and c17 is easy for every classical solver here. This is not quantum advantage.
 - **The optimizer can miss the best angles.** One COBYLA start at p=1 reaches the minimum only about 15% of the time, so even 20 starts should miss about 4% of the time. p=1 seed 4 did miss, stopping at ⟨E⟩ = 4.982. We don't know the true p=2 minimum because we did not scan it.
 - **Lowest energy is not the same as most optimal shots.** The optimizer lowers average energy only. At p=2, seed 0 had lower energy than seed 2 (3.439 vs 3.482) but fewer optimal shots (15.6% vs 24.7%).
-- **Only 6 qubits so far.** Larger designs are untested, so Gate 2 stays open until the ~12-node check in Phase 5. The balance penalty couples every pair of qubits (15 terms on c17), so the circuit grows quickly with size and could be hard to run on real hardware.
+- **Only 6 qubits at this phase.** Larger designs were untested, so Gate 2 stayed open until the ~12-node check in Phase 5. The balance penalty couples every pair of qubits (15 terms on c17), so the circuit grows quickly with size and could be hard to run on real hardware.
 - **Simulator only.** These results have no noise, so hardware results may be much worse.
 - **The mirror split is the same answer.** The Hamiltonian cannot tell a split from its mirror image, so "optimal shots" counts both.
 
@@ -111,7 +111,7 @@ We make no claim of quantum advantage anywhere.
 - We added two larger circuits, c432 (187 gates) and c880 (480 gates). QAOA can't run on them yet because they need far more than our 24-qubit limit.
 - We also added KaHyPar, an industry-grade classical partitioner, as the strongest baseline.
 
-**Results from `benchmark` (seed 0).**
+**Historical: results from `benchmark` at this phase (seed 0).** `benchmark` now also runs the multilevel pipeline, so today's output has different rows. Phase 6 is the real table.
 
 | Solver | c17 cut | c432 cut | c880 cut |
 |---|---|---|---|
@@ -180,7 +180,7 @@ KaHyPar takes about 0.05 s or less per run on these designs, and classical solve
 - **Coarsening preserves the problem.** On 20 random splits of c432 and c880, the cut and both side weights stay the same at every level. Tests also count the cut a second way, separately from `true_cut`.
 - **FM's bookkeeping is checked.** Over hundreds of moves, each predicted gain and running cut equals what `true_cut` reports. FM also raises an error if its final cut disagrees with `true_cut`.
 - **Weighted QUBO.** On all 4096 states of a real coarse instance, the balance term matches its formula. Cut terms equal the true cut when nets are exact, and the c17 Gate 1 result (cut 2, gap 1.0) still holds.
-- **QAOA's new option is safe.** `normalize` divides the Hamiltonian by its largest coefficient. Tests confirm reported energies stay on the QUBO's scale. It's off by default, and c17 results matched the previous commit exactly when we compared them, so the Phase 3 numbers stand.
+- **QAOA's new option is safe.** `normalize` divides the Hamiltonian by its largest coefficient. Tests confirm reported energies stay on the QUBO's scale. It's off by default in `qaoa()`, but `multilevel()` turns it on, so the README's QAOA + FM rows are normalized. c17 results matched the previous commit exactly when we compared them, so the Phase 3 numbers stand.
 - **Answers.** Each final split is re-scored with `true_cut` and `is_balanced`.
 
 **Where it falls short.**
@@ -188,7 +188,7 @@ KaHyPar takes about 0.05 s or less per run on these designs, and classical solve
 - **FM may be doing most of the work.** On full c432, QAOA+FM is no better than the classical versions and takes hundreds of times longer. Coarse cuts of 12 to 32 became final cuts of 11 to 14, and the best coarse cut did not give the best final cut. Phase 6's ablation measured this, and FM does most of the work.
 - **The QUBO is approximate here.** Coarse nets reach about 7 supernodes, so the QUBO uses the pair approximation on these instances.
 - **The statistics are simple.** The test pools shots across seeds, and it isn't corrected for running many settings.
-- **Small test size.** We ran 3 instances of one circuit at 12 qubits. 20 qubits hasn't been timed. The 1.5× weight cap is our own choice, not tuned or taken from the literature.
+- **Small test size.** We ran 3 instances of one circuit at 12 qubits. 20 qubits hadn't been timed at this phase; Phase 6 did that. The 1.5× weight cap is our own choice, not tuned or taken from the literature.
 - **Noise-free simulator only.** Hardware results could be much worse.
 
 ### Known limitations
@@ -354,7 +354,7 @@ On FakeFez, 2-qubit gate counts across seeds 0–9 ranged from 50 to 57, and dep
 ## Phase 9: Notebook, README and pinned versions
 
 **In plain words.**
-- The notebook now covers Phases 3–6 and ends with a limitations section. It's the required submission.
+- The notebook now covers Phases 1–6 and ends with a limitations section. It's the required submission.
 - It runs the quick steps live, such as QAOA on c17 and one c432 run. It reads the slow results from `results/` and `plots/` instead of repeating 42 minutes of runs.
 - `project_q_executed.ipynb` is the same notebook with its outputs saved, so judges can read it without running anything.
 - The README covers install steps, three commands, the results table, limitations, how we relate to QOBLIB, and the fact that we used AI assistance.

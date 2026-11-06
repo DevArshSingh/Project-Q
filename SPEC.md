@@ -1,6 +1,6 @@
 # Project Q: Spec
 
-Full background: `docs/research.md` (team guide), `docs/study_guide.html` (explainer). This file is the build contract; if they disagree, this wins.
+Full background: `docs/research.md` (team guide). This file is the build contract; if they disagree, this wins.
 
 ## Goal
 CLI tool: Verilog in → Yosys netlist → hypergraph → QUBO → QAOA (Qiskit, Aer simulator) partitions the circuit into 2 balanced groups → honest benchmark scorecard against classical solvers.
@@ -35,7 +35,7 @@ Hardware engineers who know Verilog but not quantum.
 Python 3.12 (uv venv), qiskit, qiskit-aer, qiskit-ibm-runtime, qiskit-addon-opt-mapper (new; if it breaks, build the Hamiltonian by hand from the QUBO), networkx, numpy, scipy, matplotlib, kahypar (optional), Yosys (system install). Pin versions in `requirements.txt` once working.
 
 ## Benchmarks
-c17 (6 NAND gates, 5 nets, expected best balanced cut = 2, unique optimum {g10,g11,g22} | {g16,g19,g23}), then ISCAS-85 c432, c880; a few small EPFL circuits.
+c17 (6 NAND gates, 5 nets, expected best balanced cut = 2, unique optimum {g10,g11,g22} | {g16,g19,g23}), then ISCAS-85 c432, c880. A few small EPFL circuits were planned but not run.
 
 ## Gates (stop and fix before moving on)
 - **Gate 1:** Yosys→hypergraph→QUBO energy agrees with brute force on c17. With λ = 2.0, every minimum-energy assignment is balanced with true cut 2, and the **energy gap** ΔE = min{E(x) : x not optimal} − E* is **strictly > 0** (asserted in a test; expected 1.0).
@@ -52,7 +52,7 @@ c17 (6 NAND gates, 5 nets, expected best balanced cut = 2, unique optimum {g10,g
 - 3-minute pitch + backup video
 
 ## Rules for the build
-- Phase-by-phase; each phase has tests and is committed directly to `main` (no feature branches for now) before the next starts.
+- Phase-by-phase; each phase has tests and is merged to `main` before the next starts.
 - Tests must include brute-force cross-checks of every QUBO.
 - Keep qubits ≤ 24 on the simulator.
 - Explain non-obvious quantum/EDA code in comments; the team has no prior quantum or EDA experience and must defend it to judges.

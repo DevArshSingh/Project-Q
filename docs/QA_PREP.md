@@ -49,7 +49,7 @@ A: We use IBM's `qiskit-addon-opt-mapper` for the conversion, but because it's a
 **Q: How can we trust the numbers in your scorecard?**
 A: Solvers don't report their own score. `make_record` recomputes the cut from each solver's final split using plain-Python `true_cut`, and balance comes from the one `is_balanced` rule, so every solver is judged the same way. Each JSON record keeps the split itself, so anyone can recheck it. If a split is unbalanced, we leave its gap empty so it can't look better than the best answer.
 
-**Q: KaHyPar gets cut 11 on c432 in about 0.03 s, and QAOA can't even run on it. Why use QAOA at all?**
+**Q: KaHyPar gets cut 11 on c432 in about 0.01 s, and QAOA can't even run on it. Why use QAOA at all?**
 A: For partitioning today, you should use KaHyPar, and our scorecard shows that plainly. Our contribution is the bridge from Verilog to a quantum-ready problem, plus an honest way to compare solvers on it. That lets a hardware engineer measure whether quantum solvers ever catch up. We don't claim quantum advantage. Note that 11 is the best cut found in that run, not a proven optimum.
 
 ---
