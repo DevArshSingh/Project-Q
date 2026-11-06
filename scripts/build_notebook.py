@@ -162,7 +162,7 @@ for depth, result in live_qaoa.items():
     info = result.info
     cut = true_cut(hg, result.assignment)  # re-scored classically, never from the energy
     print(f"{f'QAOA p={depth}, seed 0':<18} {info['expected_energy']:>11.3f} {info['feasible_rate']:>15.2%} {info['p_optimal']:>14.2%} {cut:>18}")"""),
-    ("md", """One seed can mislead, so the next cell reads the 5 saved p=1 runs in `results/summary.csv`, the file behind every result table in this notebook. The notebook loads saved results instead of repeating them, because the full set of runs took about 42 minutes."""),
+    ("md", """One seed can mislead, so the next cell reads the 5 saved p=1 runs in `results/summary.csv`, the file behind every result table in this notebook. The notebook loads saved results instead of repeating them, because the full set of runs takes well over an hour."""),
     ("code", """from project_q.experiments import ablation_verdict, read_rows
 
 SUMMARY = read_rows(ROOT / "results" / "summary.csv")
@@ -321,7 +321,7 @@ display(Image(filename=str(ROOT / "plots" / "ablation.png")))"""),
 - **FM does most of the work.** It turns even a random coarse split into a good final cut.
 - **A better coarse cut doesn't reliably give a better final cut.** On c880 at 12 supernodes, brute force has the best possible coarse cuts, yet random's far worse ones end slightly lower.
 - **Random+FM matches QAOA+FM** by our rule, on both designs at 12 supernodes. "Matches" means this test found no clear difference. It doesn't prove they are equal: on c432 QAOA's mean is lower and it wins more seeds, but 10 seeds couldn't confirm that, and the comparison leans the other way on c880.
-- **QAOA's coarse answers depend on size.** The 12-qubit matches say little, since 4000 shots nearly cover 4096 states. At 20 qubits, where 4000 shots can't cover about a million states, it never reached the coarse optimum.
+- **QAOA's coarse answers depend on size.** The 12-qubit matches say little, since 4000 shots nearly cover 4096 states. At 20 qubits, where 4000 shots can't cover about a million states, it reached the coarse optimum in 0 of 6 runs (1 of 6 in an earlier run with Aer's default threads, so "rarely", not "never").
 - **Classical tools are ahead.** On c432 at 12 supernodes, simulated annealing+FM has the same final cuts as QAOA+FM on all 10 seeds, about 500 times faster. KaHyPar alone is at least as good as every multilevel row's mean."""),
     ("md", """**Choosing λ without brute force.** λ sets how strongly the QUBO punishes uneven splits. Fixed λ = 2.0 suits c17 but not heavy supernodes. `suggest_lambda` computes it from the circuit alone: λ = d̄ / (δ_out² − δ_min²), where d̄ is the average number of nets per node, δ_min the smallest possible imbalance, and δ_out the first imbalance the balance rule rejects. So going from the most even split to the first illegal one costs about as much as the wires on a typical node.
 
@@ -379,7 +379,7 @@ Last, the partition picture: c17's proven-optimal split, with its 2 cut nets in 
 - **Classical wins.** KaHyPar alone beats or ties every multilevel mean on both designs, in 0.03 s or less. QAOA+FM takes about 18 s to 250 s per run.
 - **FM does most of the work.** Random+FM matches QAOA+FM by the rule we fixed in advance.
 - **Tuned QAOA favours balance, not better cuts.** Among balanced shots, it hits the optimum about as often as guessing does (Gate 2).
-- **At 20 qubits QAOA reached the coarse optimum in 0 of 6 runs.** We didn't run uniform guessing at that size, so we can't compare its shots with guessing there.
+- **At 20 qubits QAOA reached the coarse optimum in 0 of 6 runs** (1 of 6 in an earlier run with Aer's default threads). These rows use one Aer thread, because default threads gave different cuts for the same seed; pinned runs repeat exactly, checked on one machine only. We didn't run uniform guessing at that size, so we can't compare its shots with guessing there.
 
 **Known limitations** (from `docs/DEFENSE.md`)
 1. **λ = 2.0 doesn't suit weighted supernodes. Partly fixed.** On 2 of the 3 coarsened c432 instances from Phase 5, its lowest-energy state isn't the best balanced split (cut 19 vs 12, cut 23 vs 16). `suggest_lambda` needs no brute force and improves on 2.0, but its lowest-energy state is optimal on only 11 of 23 held-out instances, and it doesn't change what QAOA samples on the instance we swept.

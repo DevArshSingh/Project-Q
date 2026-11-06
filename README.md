@@ -66,7 +66,7 @@ Mean final cut (lowest–highest), where lower is better. All 210 runs are in [`
 | Random + FM, 20 supernodes | | 12.3 (11–14) | 28.0 (26–30) | 0.01 / 0.06 |
 | Simulated annealing + FM, 20 | | 11.0 (11–11) | 28.7 (24–33) | 0.05 / 0.12 |
 | Brute force + FM, 20 | | 11.3 (11–12) | 26.3 (24–29) | 0.63 / 0.81 |
-| QAOA + FM, 20 | | 12.7 (11–16) | 28.7 (27–31) | 251.53 / 171.16 |
+| QAOA + FM, 20 | | 12.7 (11–16) | 27.7 (27–28) | 938.34 / 738.67 |
 
 Seeds: 5 on c17 (brute force runs once), 10 on flat c432 and c880 rows and at 12 supernodes, and only 3 at 20 supernodes. FM (Fiduccia–Mattheyses) is the classical step that polishes a split one node at a time. Only c17's optimum is proven. The best cuts on c432 and c880 are just the best we found. "Not possible" means it would need 187 or 480 qubits, and our limit is 24.
 
@@ -81,12 +81,13 @@ More plots: [`plots/lambda_sweep.png`](plots/lambda_sweep.png) and [`plots/parti
 
 ## Limitations
 
-- **Qubit limit.** QAOA is capped at 24 qubits on the simulator, and we benchmarked up to 20. Larger circuits only reach QAOA after heavy coarsening, and at 20 qubits QAOA reached the coarse optimum in 0 of 6 runs.
+- **Qubit limit.** QAOA is capped at 24 qubits on the simulator, and we benchmarked up to 20. Larger circuits only reach QAOA after heavy coarsening, and at 20 qubits QAOA reached the coarse optimum in 0 of 6 runs (1 of 6 in an earlier run with Aer's default threads).
 - **Pair approximation.** The QUBO is exact for nets of 2 or 3 gates. Nets of 4–8 gates are approximated by weighted pairs, which over-scores even splits, and larger nets are left out of the QUBO. Lowest energy therefore may not be lowest cut, so every answer is re-scored classically with `true_cut`.
 - **λ is unsolved on coarsened circuits.** `suggest_lambda` improves on a fixed λ = 2.0, but its lowest-energy state is the true best split on only 11 of 23 held-out instances, and it didn't change what QAOA samples on the instance we swept.
 - **FM can get stuck when balance is tight.** On c17 no single move from a 3/3 split is legal, so c17 runs without multilevel.
 - **Hardware has not been run.** Every result here is from the noise-free Aer simulator, and real hardware could be much worse. `scripts/hardware_c17.py` is built for one small IBM run on c17, but so far it has only been tested locally, against stubs and a simulated noise model. No job has been sent to IBM, and even a good result on 6 qubits wouldn't say anything about larger circuits.
 - **Thin evidence.** Two larger circuits, p=1 in the benchmarks, 3 seeds at 20 supernodes, and no correction for multiple comparisons. Solvers weren't tuned, and QAOA's best of 4000 checked shots is compared with random's single split, which favours QAOA.
+- **20-qubit repeatability.** These rows use one Aer thread, because with default threads the same seed gave different cuts (c880 mean 28.7 and 29.3 in two runs, against 27.7 pinned; c432 mean 12.7 and 11.0, against 12.7 pinned). Pinned runs repeat exactly, but we checked that on one machine only.
 - **Benchmarks aren't the original ISCAS-85 files.** They were re-synthesized twice, so cuts can't be compared directly with published results. See [`benchmarks/SOURCES.md`](benchmarks/SOURCES.md).
 - **Scope.** Two-way splits only. Only combinational benchmarks have been tested. Wire routing: not built (stretch goal).
 - **Licensing is unresolved.** This repository has no license yet. The optional KaHyPar config is GPLv3+, and the benchmark source repository lists no license, so check both before redistributing.
