@@ -33,13 +33,15 @@ You are building Project Q for the IBM Qiskit Fall Fest 2026 (UW Quantum Club). 
 | Nov 6 | Rehearse twice, fix only bugs, final push before 6:30 PM |
 Cut order if behind: routing (Phase 7, never start), c880, p=2, extra λ values, poster.
 
-## Owners (fill in with teammates' names)
+## Owners
 | Phase | Owner |
 |---|---|
-| 1 Parser, 5 Coarsening | _(hardware lead)_ |
-| 2 QUBO, 6 Benchmarks | _(formulation lead)_ |
-| 3 QAOA, 8 Hardware | _(quantum lead)_ |
-| 4 CLI, 9 Notebook + README, slides | _(demo lead)_ |
+| 0 Environment, 1 Parser, 2 QUBO | Dev Arsh Singh |
+| 3 QAOA, 4 CLI | Shrugal |
+| 5 Coarsening, 8 Hardware | Prisha |
+| 6 Benchmarks, 9 Notebook + README | Moath |
+| 7 Routing | Not built (stretch goal) |
+| Review, audit, final polish | Dev Arsh Singh |
 
 ---
 

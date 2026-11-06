@@ -103,6 +103,16 @@ Project Q shares that approach: fixed rules, recorded seeds, classical baselines
 - Balanced circuit partitioning isn't one of the ten classes, and our instances aren't from the library.
 - The closest class is Steiner tree packing, which models VLSI wire routing. Our planned simplified routing demo would have touched on it, but it wasn't built.
 
-## How it was built
+## Team and how it was built
 
-The team built this project with AI assistance (Claude Code) and reviewed the work. [`docs/DEFENSE.md`](docs/DEFENSE.md) and [`docs/QA_PREP.md`](docs/QA_PREP.md) record what each part does, why we believe it, and where it falls short.
+| Phases | Work | Who | GitHub |
+|---|---|---|---|
+| 0–2 | Environment, Verilog parser, QUBO and baselines | Dev Arsh Singh | DevArshSingh |
+| 3–4 | QAOA on Aer; scorecard, CLI and KaHyPar baseline | Shrugal | shrugalagarwal-rgb |
+| 5, 8 | Coarsening and FM; IBM hardware script and dry run | Prisha | prishalala |
+| 6, 9 | Benchmarks, ablation and λ rule; notebook and README | Moath | muazsaleh2009-cpu |
+| Across all | Review, audit and final polish | Dev Arsh Singh | DevArshSingh |
+
+Phase 7 (routing) was not built (stretch goal).
+
+The code was built with AI assistance (Claude Code). Each teammate committed their phase and can explain it. [`docs/DEFENSE.md`](docs/DEFENSE.md) and [`docs/QA_PREP.md`](docs/QA_PREP.md) record what each part does, why we believe it, and where it falls short.
