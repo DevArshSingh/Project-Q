@@ -118,10 +118,10 @@ Budget: ~10 minutes of QPU time TOTAL, so do exactly one small job after everyth
 - **Done when:** a fresh clone can follow the README and reproduce the c17 run.
 
 ## Final checklist
-- [ ] `project-q partition design.v --solver qaoa` works
-- [ ] Results table (all solvers × c17, c432, c880)
-- [ ] Ablation chart, λ sweep plot, partition picture
+- [x] `project-q partition design.v --solver qaoa` works
+- [x] Results table (all solvers × c17, c432, c880)
+- [x] Ablation chart, λ sweep plot, partition picture
 - [ ] One hardware run reported honestly
 - [ ] Routing demo: not built (stretch goal)
-- [ ] README + `notebooks/project_q.ipynb`
-- [ ] No tokens or secrets in git history
+- [x] README + `notebooks/project_q.ipynb`
+- [x] No tokens or secrets in git history

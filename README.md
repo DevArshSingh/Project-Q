@@ -105,13 +105,13 @@ Project Q shares that approach: fixed rules, recorded seeds, classical baselines
 
 ## Team and how it was built
 
-| Phases | Work | Who | GitHub |
-|---|---|---|---|
-| 0–2 | Environment, Verilog parser, QUBO and baselines | Dev Arsh Singh | DevArshSingh |
-| 3–4 | QAOA on Aer; scorecard, CLI and KaHyPar baseline | Shrugal | shrugalagarwal-rgb |
-| 5, 8 | Coarsening and FM; IBM hardware script and dry run | Prisha | prishalala |
-| 6, 9 | Benchmarks, ablation and λ rule; notebook and README | Moath | muazsaleh2009-cpu |
-| Across all | Review, audit and final polish | Dev Arsh Singh | DevArshSingh |
+| Phases | Work | Who |
+|---|---|---|
+| 0–2 | Environment, Verilog parser, QUBO and baselines | Dev Arsh |
+| 3–4 | QAOA on Aer; scorecard, CLI and KaHyPar baseline | Shrugal |
+| 5, 8 | Coarsening and FM; IBM hardware script and dry run | Prisha |
+| 6, 9 | Benchmarks, ablation and λ rule; notebook and README | Moath |
+| Across all | Review, audit and final polish | Dev Arsh |
 
 Phase 7 (routing) was not built (stretch goal).
 

@@ -2,7 +2,7 @@
 
 ## ISCAS-85 circuits
 
-`c17.v` is the standard ISCAS-85 c17 (6 NAND gates), written during Phase 1 with AI assistance rather than downloaded.
+`c17.v` is the standard ISCAS-85 c17 (6 NAND gates), added in the initial repo setup (commit 0d8b31c), AI-assisted.
 
 | File | Source | SHA-256 |
 |---|---|---|
