@@ -30,7 +30,7 @@ A: N3 feeds two gates. If those gates land on different chips, the N3 signal has
 A: On c17 we check every one of the 64 possible assignments. The QUBO's cut energy equals the true cut on all 64, and brute force shows the lowest-energy state is exactly the best balanced split (cut 2), with an energy gap of 1.0 to the next state. Every solver's final answer is re-scored by plain-Python `true_cut`, never by the QUBO energy.
 
 **Q: Why λ = 2.0 for the balance penalty?**
-A: λ trades cut against balance. On c17 the best lopsided split sits only 1.0 above the optimum at λ = 1, but 2.0 above it at λ = 2. That makes a noisy solver less likely to drift to an unbalanced answer, while the cut terms still decide among balanced splits. We chose it on c17 only, so the λ sweep re-checks it on larger designs.
+A: λ trades cut against balance. On c17 the best lopsided split sits only 1.0 above the optimum at λ = 1, but 2.0 above it at λ = 2. That makes a noisy solver less likely to drift to an unbalanced answer, while the cut terms still decide among balanced splits. We chose it on c17 only, and it fails on some larger designs, so Phase 6 adds a rule that computes λ from the circuit. That rule also gives 2.0 on c17.
 
 ---
 
@@ -60,5 +60,26 @@ A: For partitioning today, you should use KaHyPar, and our scorecard shows that 
 A: Not by itself. With 4000 shots on only 4096 states, random guessing also matched in 14 of 15 runs, against QAOA's 15 of 15. So we compared shot rates as well. QAOA gave more than twice as many balanced shots as guessing, but among balanced shots it hit the optimum about as often as guessing did (for example 0.55% vs 0.55%). Our test, fixed before running, passed on 2 of 3 instances at p=1. So QAOA learned to balance, and we have no evidence yet that it finds better cuts. Gate 2 passes as the SPEC wrote it, and we report that limit openly. This is not quantum advantage.
 
 **Q: If FM refines everything anyway, what is QAOA contributing on c432?**
-A: Right now, nothing measurable. Random+FM got cuts of 11, 14 and 14, simulated annealing+FM 12, 11 and 11, and QAOA+FM 12, 12 and 12, at hundreds of times the runtime. KaHyPar got 11 in about 0.02 s. Most of the improvement comes from FM: coarse cuts of 12 to 32 became final cuts of 11 to 14. These are 3 seeds on one circuit, so Phase 6 runs a proper ablation, and we'll state plainly if random+FM matches QAOA+FM. Merging itself can't distort the score, because a coarse split costs exactly what its full-size split costs, and tests check this.
+A: Right now, nothing measurable. Random+FM got cuts of 11, 14 and 14, simulated annealing+FM 12, 11 and 11, and QAOA+FM 12, 12 and 12, at hundreds of times the runtime. KaHyPar got 11 in about 0.02 s. Most of the improvement comes from FM: coarse cuts of 12 to 32 became final cuts of 11 to 14. Those were 3 seeds on one circuit. Phase 6's larger ablation reached the same conclusion: random+FM matches QAOA+FM. Merging itself can't distort the score, because a coarse split costs exactly what its full-size split costs, and tests check this.
 
+---
+
+## Phase 6: Benchmarks, ablation and the λ rule
+
+**Q: Does QAOA actually improve the final partition?**
+A: We found no clear evidence that it does. We kept coarsening and FM the same and swapped only the coarse solver. At 12 supernodes over 10 seeds, random+FM against QAOA+FM averaged 13.5 vs 11.5 on c432 (p = 0.289) and 25.0 vs 26.2 on c880 (p = 0.219). So by a rule we fixed before running, random+FM matches QAOA+FM. FM does most of the work: it takes random's coarse cuts of about 61 on c880 down to 25. Simulated annealing+FM got the same c432 cuts as QAOA+FM in 0.04 s instead of 17.9 s, and KaHyPar alone got 11 in 0.01 s. At 20 qubits QAOA never reached the coarse optimum in 6 runs. Those are only 3 seeds per design, and this is a noise-free simulator at p=1.
+
+**Q: How do you choose λ without brute force, and does it work?**
+A: We use λ = d̄ / (δ_out² − δ_min²): going from the most even split to the first illegal one costs about as much as the wires on a typical node. It uses only the circuit and gives exactly 2.0 on c17. We tested it on 23 instances we hadn't looked at, using brute force only to score it. Its lowest-energy state was the true best split on 11 of 23, against 8 of 23 for fixed λ = 2.0, and it was never worse. So it's better, but it isn't solved. It also didn't change what QAOA samples on the instance we swept: balanced shots stayed around 22% at every λ from 0.1 to 10. We didn't adjust the formula after seeing those results.
+
+---
+
+## Phase 8: The single IBM hardware run
+
+These answers describe the design. Until the job has run, say plainly that there are no hardware numbers yet.
+
+**Q: What does your hardware run actually prove?**
+A: Only that the circuit our pipeline builds from Verilog can run on a real chip, and how much noise changes its output. It doesn't show quantum beating classical, because brute force solves c17 instantly. Finding cut 2 proves almost nothing, since 4000 random shots on 64 states would almost surely include an optimal split. So we compare the rates of balanced and optimal shots against noise-free Aer (68.65% and 10.15% in our baseline run) and uniform guessing (31.25% and 3.125%). The angles were tuned on Aer, and scoring uses the same classical `true_cut` and `is_balanced` as every other solver.
+
+**Q: What if noise dominates? And why did you try 10 transpile seeds if you won't re-run?**
+A: If noise dominates, we report that. The balanced and optimal rates would fall toward guessing, and that's a real result about running this circuit on today's hardware. We get one run: the script records the job before sending it and refuses a second `--submit`, because re-running until the numbers look good would be picking the result we like. The 10 seeds are different. They only compare circuit sizes before any shots are taken, and they use no QPU time, so they can't favour a good-looking answer. We keep the version with the fewest 2-qubit gates and log all 10 in the results.
